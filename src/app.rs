@@ -77,7 +77,7 @@ impl HunkApp {
         let brand_icon = load_texture_from_png(
             &cc.egui_ctx,
             "brand-icon",
-            include_bytes!("../../assets/branding/icon_256.png"),
+            include_bytes!("../assets/branding/icon_256.png"),
         );
         let screenshot_path = std::env::var_os("HUNK_POC_SCREENSHOT").map(PathBuf::from);
         let demo_requested = std::env::var_os("HUNK_POC_DEMO").is_some();

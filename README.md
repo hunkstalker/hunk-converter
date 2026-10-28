@@ -4,7 +4,7 @@ Prueba de concepto **independiente** del prototipo Godot. Su objetivo es medir s
 Rust + egui permite conservar la experiencia y reducir de forma clara el consumo
 de recursos antes de decidir una migración.
 
-![Vista de la PoC](../docs/hunk-converter-rust-poc.png)
+![Vista de la PoC](docs/hunk-converter-rust-poc.png)
 
 ## Qué valida
 
@@ -69,7 +69,7 @@ cargo run --release
 Para generar las capturas de documentación:
 
 ```bash
-HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=../docs/hunk-converter-rust-poc.png \
+HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
   cargo run --release
 ```
 
@@ -77,7 +77,7 @@ Para probar la vista ICO:
 
 ```bash
 HUNK_POC_DEMO=1 HUNK_POC_FORMAT=ico \
-  HUNK_POC_SCREENSHOT=../docs/hunk-converter-rust-poc-ico.png \
+  HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc-ico.png \
   cargo run --release
 ```
 
@@ -101,12 +101,12 @@ Cubre codificación de los cuatro formatos, calidad frente a tamaño,
 transparencia PNG, aplanado JPG, estructura y frames ICO, y conversiones de
 color.
 
-## Limitaciones de esta PoC
+## Limitaciones del piloto
 
 - No incluye SVG.
 - No respeta orientación EXIF.
 - No conserva metadatos ni perfiles ICC.
-- No incluye AVIF, HEIC ni JPEG XL; están registrados en `todo.md`.
+- No incluye AVIF, HEIC ni JPEG XL; están registrados en `../Prototipo/todo.md`.
 - No tiene accesibilidad nativa completa.
 - La lectura de la imagen inicial ocurre en el hilo de interfaz.
 - La ventana mínima es 1024 × 800.
@@ -116,3 +116,15 @@ color.
 
 El prototipo Godot sigue siendo la versión de referencia hasta que se decida la
 migración definitiva.
+
+## Documentación y contexto
+
+- `retomar.md`: estado y comandos para retomar el piloto.
+- `notes/`: evidencia fechada de la sesión.
+- `../Prototipo/`: prototipo Godot de referencia y documentación del producto.
+
+## Licencia
+
+Código bajo [MIT](LICENSE). La tipografía Manrope se distribuye bajo la SIL Open
+Font License 1.1; su licencia está incluida en
+[assets/fonts/OFL.txt](assets/fonts/OFL.txt).

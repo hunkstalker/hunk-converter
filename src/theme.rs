@@ -25,7 +25,7 @@ pub const DANGER: Color32 = Color32::from_rgb(255, 126, 126);
 pub const CHECKER_A: Color32 = Color32::from_rgb(32, 40, 48);
 pub const CHECKER_B: Color32 = Color32::from_rgb(39, 50, 60);
 
-const MANROPE: &[u8] = include_bytes!("../../assets/fonts/Manrope.ttf");
+const MANROPE: &[u8] = include_bytes!("../assets/fonts/Manrope.ttf");
 
 pub fn install(ctx: &egui::Context) {
     let mut fonts = FontDefinitions::default();

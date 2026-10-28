@@ -34,7 +34,7 @@ fn main() -> eframe::Result {
 }
 
 fn window_icon() -> egui::IconData {
-    let image = image::load_from_memory(include_bytes!("../../assets/branding/icon_256.png"))
+    let image = image::load_from_memory(include_bytes!("../assets/branding/icon_256.png"))
         .expect("icono de aplicación inválido")
         .to_rgba8();
     egui::IconData {
