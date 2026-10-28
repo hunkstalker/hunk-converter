@@ -27,6 +27,15 @@ HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
   cargo run --release
 ```
 
+## Medidas recientes
+
+- Arranque a ventana: 173,1 ms frente a 239,8 ms de Godot.
+- RAM en reposo: 100,9 MiB frente a 209,7 MiB.
+- RAM con imagen 12 MP: 211,3 MiB frente a 316,9 MiB.
+- WebP q82 12 MP: 743,9 ms frente a 1121 ms.
+- JPG q82 12 MP: 380,8 ms frente a 1137 ms.
+- Informe completo: `docs/benchmark-2026-10-28.md`.
+
 ## Decisiones y límites
 
 - Se mantiene separado del prototipo Godot en `../Prototipo/`.
@@ -39,6 +48,7 @@ HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
 ## Documentos
 
 - `README.md`: alcance, medidas comparativas y funcionamiento.
+- `docs/benchmark-2026-10-28.md`: mediciones completas de arranque, memoria, CPU, códecs y distribución.
 - `../Prototipo/todo.md`: tareas del producto principal.
 - `../Prototipo/retomar.md`: contexto del prototipo Godot.
 

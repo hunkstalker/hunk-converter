@@ -21,33 +21,35 @@ de recursos antes de decidir una migración.
 
 ## Medidas de la prueba
 
-Entorno de la medición: Debian 12, Rust 1.99.1, egui/eframe 0.37, Godot 4.7.2,
+Entorno: Debian 12, Rust 1.99.1, egui/eframe 0.37 y Godot 4.7.2,
 renderizado por software con llvmpipe bajo Xvfb. Imagen sintética de
-**4000 × 3000 px** (12 MP) y PNG de 19,08 MB. Una sola ejecución; son cifras de
-referencia, no un benchmark estadístico.
+**4000 × 3000 px** (12 MP). Son cifras orientativas; el detalle y las condiciones
+están en el [informe completo](docs/benchmark-2026-10-28.md).
 
 | Métrica | Godot 0.1.0 | PoC Rust/egui | Diferencia |
 | --- | ---: | ---: | ---: |
-| Binario Linux | 70,7 MiB | 7,5 MiB | **≈ 90 % menor** |
-| Ejecutable Windows | 104,7 MiB | 6,4 MiB | **≈ 94 % menor** |
-| Carga + decode | 200,4 ms | 88,2 ms | **≈ 56 % menos** |
-| WebP q82 | 1169,3 ms / 88,9 KB | 754,5 ms / 78,7 KB | **35 % menos tiempo** |
-| JPG q82 | 1183,8 ms / 604,7 KB | 398,7 ms / 700,9 KB | **66 % menos tiempo** |
-| PNG | 4713,2 ms / 12,24 MB | 3255,0 ms / 12,36 MB | **31 % menos tiempo** |
-| ICO 16–256 | 735,5 ms / 43,2 KB | 496,0 ms / 43,1 KB | **33 % menos tiempo** |
-| Pico de memoria (benchmark) | ≈ 318 MB | ≈ 230 MB | **28 % menos** |
-| RAM en reposo (RSS) | ≈ 277 MB | ≈ 102 MB | **63 % menos** |
-| RAM con imagen cargada (RSS) | ≈ 303 MB | ≈ 130 MB | **57 % menos** |
+| Arranque a ventana (mediana) | 239,8 ms | 173,1 ms | **−27,8 %** |
+| Binario Linux | 70,7 MiB | 7,5 MiB | **−89,4 %** |
+| Ejecutable Windows | 104,7 MiB | 6,4 MiB | **−93,9 %** |
+| RAM en reposo (RSS) | 209,7 MiB | 100,9 MiB | **−51,9 %** |
+| RAM con imagen 12 MP | 316,9 MiB | 211,3 MiB | **−33,3 %** |
+| Pico con GUI e imagen 12 MP | 447,5 MiB | 336,3 MiB | **−24,8 %** |
+| WebP q82, 12 MP | 1121,0 ms / 88,9 KB | 743,9 ms / 78,7 KB | **−33,6 %** |
+| JPG q82, 12 MP | 1137,0 ms / 604,7 KB | 380,8 ms / 700,9 KB | **−66,5 %** |
+| PNG, 12 MP | 4723,4 ms / 12,24 MB | 3225,0 ms / 12,36 MB | **−31,7 %** |
+| ICO 16–256, 12 MP | 723,9 ms / 43,2 KB | 448,8 ms / 43,1 KB | **−38,0 %** |
+| CPU en reposo, 60 FPS software | ≈1130 % | **0 %** | actividad continua vs. bajo demanda |
 
 La RAM en reposo se midió con las dos aplicaciones abiertas y sin imagen; la
-cargada, con la misma imagen de 1600 × 1000. En ambos casos se usó el mismo
-servidor Xvfb y llvmpipe, por lo que el consumo absoluto es mayor que con una GPU
-real; la comparación relativa es la que importa.
+cargada, con una imagen de 4000 × 3000. En ambos casos se usó el mismo servidor
+Xvfb y llvmpipe, por lo que el consumo absoluto es mayor que con una GPU real.
+La CPU se mide por proceso (100 % = un núcleo); el valor de Godot está inflado
+por el renderizado software sin VSync y no debe extrapolarse a vatios reales.
 
 Conclusiones provisionales:
 
-- La mejora de CPU en códecs va de uno a dos dígitos porcentuales o más según
-  formato, pero no es un orden de magnitud: libwebp ya es nativo en ambos casos.
+- La mejora de tiempo en códecs va del 32 % al 66 % en 12 MP, pero no es un
+  orden de magnitud: libwebp ya es nativo en ambos casos.
 - La diferencia estructural está en **tamaño del ejecutable, arranque y memoria**.
 - egui cubre sin problemas este tipo de interfaz: lienzo propio, arrastre, slider,
   drag & drop, selector de color y paneles.
@@ -121,6 +123,7 @@ migración definitiva.
 ## Documentación y contexto
 
 - `retomar.md`: estado y comandos para retomar el piloto.
+- `docs/benchmark-2026-10-28.md`: informe completo de rendimiento, memoria, arranque y empaquetado.
 - `notes/`: evidencia fechada de la sesión.
 - `../Prototipo/`: prototipo Godot de referencia y documentación del producto.
 
