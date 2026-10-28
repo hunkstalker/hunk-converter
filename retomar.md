@@ -34,10 +34,21 @@ HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
 - No incluye SVG, EXIF, accesibilidad completa, AVIF, HEIC ni JPEG XL.
 - La ventana mínima es 1024 × 800.
 - La exportación se escribe junto al ejecutable (`target/release/export/` en desarrollo).
-- No hay build Windows propia todavía.
+- La build Windows se generó por compilación cruzada, pero no se ejecutó en un Windows real.
 
 ## Documentos
 
 - `README.md`: alcance, medidas comparativas y funcionamiento.
 - `../Prototipo/todo.md`: tareas del producto principal.
 - `../Prototipo/retomar.md`: contexto del prototipo Godot.
+
+## Builds
+
+```bash
+./scripts/build_dist.sh linux
+./scripts/build_dist.sh windows
+./scripts/build_dist.sh all
+```
+
+Los artefactos quedan en `dist/`. La build Linux fue validada; la Windows se
+generó por compilación cruzada y no se ejecutó en Windows en esta sesión.

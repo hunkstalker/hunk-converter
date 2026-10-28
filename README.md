@@ -29,6 +29,7 @@ referencia, no un benchmark estadístico.
 | Métrica | Godot 0.1.0 | PoC Rust/egui | Diferencia |
 | --- | ---: | ---: | ---: |
 | Binario Linux | 70,7 MiB | 7,5 MiB | **≈ 90 % menor** |
+| Ejecutable Windows | 104,7 MiB | 6,4 MiB | **≈ 94 % menor** |
 | Carga + decode | 200,4 ms | 88,2 ms | **≈ 56 % menos** |
 | WebP q82 | 1169,3 ms / 88,9 KB | 754,5 ms / 78,7 KB | **35 % menos tiempo** |
 | JPG q82 | 1183,8 ms / 604,7 KB | 398,7 ms / 700,9 KB | **66 % menos tiempo** |
@@ -128,3 +129,31 @@ migración definitiva.
 Código bajo [MIT](LICENSE). La tipografía Manrope se distribuye bajo la SIL Open
 Font License 1.1; su licencia está incluida en
 [assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+
+## Builds portables
+
+En `dist/` se generan carpetas autocontenidas con el ejecutable, `export/`,
+licencias y `LEEME.txt`:
+
+```text
+hunk-converter-piloto-0.1.0-windows-x86_64/
+├── hunk-converter-piloto.exe
+├── export/
+├── LEEME.txt
+├── LICENSE.txt
+└── LICENCIAS/Manrope-OFL.txt
+```
+
+```bash
+./scripts/build_dist.sh linux
+./scripts/build_dist.sh windows
+./scripts/build_dist.sh all
+```
+
+- Linux: binario nativo. La build de esta sesión está en
+  `dist/hunk-converter-piloto-0.1.0-linux-x86_64.tar.gz`.
+- Windows: por defecto compila para `x86_64-pc-windows-gnu`. Requiere el target
+  de Rust y un toolchain de enlazado adecuado. La build de esta sesión está en
+  `dist/hunk-converter-piloto-0.1.0-windows-x86_64.zip`.
+- La build Linux se ejecutó y exportó correctamente junto a su binario. La build
+  Windows se generó, pero no se ejecutó en un Windows real en esta sesión.
