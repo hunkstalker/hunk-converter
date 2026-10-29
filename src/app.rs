@@ -31,7 +31,9 @@ pub struct HunkApp {
     brand_icon: Option<TextureHandle>,
     language: Lang,
     history: Vec<HistoryEntry>,
+    fullscreen: bool,
     sample_pending_history: bool,
+    color_panel_height: f32,
     format: OutputFormat,
     quality: u8,
     ico_selected: [bool; 6],
@@ -85,7 +87,7 @@ struct Toast {
 }
 
 impl HunkApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, settings: config::Settings) -> Self {
         T::install(&cc.egui_ctx);
 
         let brand_icon = load_texture_from_png(
@@ -104,14 +106,15 @@ impl HunkApp {
             .skip(1)
             .find(|argument| !argument.starts_with("--") && Path::new(argument).is_file());
 
-        let settings = config::Settings::load();
         let mut app = Self {
             source: None,
             result: None,
             brand_icon,
             language: settings.language,
             history: settings.history,
+            fullscreen: settings.fullscreen,
             sample_pending_history: false,
+            color_panel_height: 300.0,
             format: OutputFormat::Webp,
             quality: 82,
             ico_selected: [true; 6],
@@ -160,8 +163,16 @@ impl HunkApp {
         config::Settings {
             language: self.language,
             history: self.history.clone(),
+            fullscreen: self.fullscreen,
         }
         .save();
+    }
+
+    fn set_fullscreen(&mut self, ctx: &egui::Context, fullscreen: bool) {
+        self.fullscreen = fullscreen;
+        ctx.send_viewport_cmd(ViewportCommand::Fullscreen(fullscreen));
+        self.save_settings();
+        ctx.request_repaint();
     }
 
     fn remember_color(&mut self, rgba: [u8; 4]) -> bool {
@@ -679,6 +690,16 @@ impl HunkApp {
                             self.save_settings();
                             ctx.request_repaint();
                         }
+
+                        let response = fullscreen_button(ui, self.fullscreen);
+                        let hint = if self.fullscreen {
+                            self.t(K::ExitFullscreen)
+                        } else {
+                            self.t(K::Fullscreen)
+                        };
+                        if response.on_hover_text(hint).clicked() {
+                            self.set_fullscreen(&ctx, !self.fullscreen);
+                        }
                     });
                 });
             });
@@ -734,27 +755,37 @@ impl HunkApp {
                     ui.set_min_height(ui.available_height());
                     ui.set_width(ui.available_width());
 
-                    let scroll_height = (ui.available_height() - 70.0).max(200.0);
-                    egui::ScrollArea::vertical()
+                    let export_height = 68.0;
+                    let scroll_height =
+                        (ui.available_height() - self.color_panel_height - export_height - 8.0)
+                            .max(160.0);
+                    let mut settings_scroll = egui::ScrollArea::vertical()
                         .id_salt("sidebar_scroll")
                         .auto_shrink([false, false])
-                        .max_height(scroll_height)
-                        .show(ui, |ui| {
-                            ui.set_width(ui.available_width());
-                            self.show_sidebar_top(
-                                ui,
-                                &ctx,
-                                source_texture,
-                                &file_name,
-                                &file_format,
-                                file_size,
-                                dimensions,
-                            );
-                            ui.add_space(6.0);
-                            self.show_color_panel(ui, &ctx);
-                        });
+                        .max_height(scroll_height);
+                    if scroll_height < 300.0 {
+                        settings_scroll = settings_scroll.scroll_bar_visibility(
+                            egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
+                        );
+                    }
+                    settings_scroll.show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        self.show_sidebar_top(
+                            ui,
+                            &ctx,
+                            source_texture,
+                            &file_name,
+                            &file_format,
+                            file_size,
+                            dimensions,
+                        );
+                    });
 
                     ui.add_space(4.0);
+                    let color_panel = ui.scope(|ui| self.show_color_panel(ui, &ctx));
+                    self.color_panel_height = color_panel.response.rect.height();
+                    let remaining = (ui.available_height() - export_height).max(0.0);
+                    ui.add_space(remaining);
                     self.show_export(ui);
                 });
             });
@@ -1664,34 +1695,39 @@ impl HunkApp {
             return;
         }
         let remaining = toast.until - now;
-        let frame = Frame::new()
-            .fill(if toast.error {
-                Color32::from_rgb(42, 24, 26)
-            } else {
-                T::SURFACE_3
-            })
-            .stroke(Stroke::new(
-                1.0,
-                if toast.error {
-                    Color32::from_rgba_unmultiplied(255, 126, 126, 140)
-                } else {
-                    T::BORDER_STRONG
-                },
-            ))
-            .corner_radius(CornerRadius::same(10))
-            .inner_margin(Margin::symmetric(16, 9));
+        let text_color = if toast.error { T::DANGER } else { T::TEXT };
+        let fill = if toast.error {
+            Color32::from_rgb(42, 24, 26)
+        } else {
+            T::SURFACE_3
+        };
+        let stroke_color = if toast.error {
+            Color32::from_rgba_unmultiplied(255, 126, 126, 140)
+        } else {
+            T::BORDER_STRONG
+        };
+        let message = toast.message.clone();
+
         egui::Area::new(Id::unique("toast"))
             .anchor(Align2::CENTER_TOP, vec2(0.0, 68.0))
             .order(egui::Order::Foreground)
             .interactable(false)
             .show(ctx, |ui| {
-                frame.show(ui, |ui| {
-                    ui.label(
-                        RichText::new(&toast.message)
-                            .size(11.0)
-                            .color(if toast.error { T::DANGER } else { T::TEXT }),
-                    );
-                });
+                let galley =
+                    ui.painter()
+                        .layout(message, FontId::proportional(11.0), text_color, 420.0);
+                let padding = vec2(16.0, 9.0);
+                let (rect, _) =
+                    ui.allocate_exact_size(galley.size() + padding * 2.0, Sense::hover());
+                let painter = ui.painter();
+                painter.rect(
+                    rect,
+                    CornerRadius::same(10),
+                    fill,
+                    Stroke::new(1.0, stroke_color),
+                    StrokeKind::Inside,
+                );
+                painter.galley(rect.min + padding, galley, text_color);
             });
         ctx.request_repaint_after(remaining.min(Duration::from_millis(100)));
     }
@@ -1755,6 +1791,10 @@ impl eframe::App for HunkApp {
         if self.eyedropper_active && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
             self.eyedropper_active = false;
             ctx.request_repaint();
+        }
+
+        if ctx.input(|input| input.key_pressed(egui::Key::F11)) {
+            self.set_fullscreen(&ctx, !self.fullscreen);
         }
 
         let (export_shortcut, reset_shortcut, open_shortcut) = ctx.input(|input| {
@@ -2129,6 +2169,43 @@ fn format_card(
         if selected { T::ACCENT } else { T::TEXT_FAINT },
     );
     response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+fn fullscreen_button(ui: &mut egui::Ui, fullscreen: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(28.0, 26.0), Sense::click());
+    let hovered = response.hovered();
+    if hovered {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(8), T::SURFACE_3);
+    }
+    let color = if hovered { T::TEXT } else { T::TEXT_MUTED };
+    let inner = rect.shrink(7.0);
+    let length = if fullscreen { 3.5 } else { 5.0 };
+    for (corner, dx, dy) in [
+        (inner.left_top(), 1.0, 1.0),
+        (inner.right_top(), -1.0, 1.0),
+        (inner.left_bottom(), 1.0, -1.0),
+        (inner.right_bottom(), -1.0, -1.0),
+    ] {
+        let corner = if fullscreen {
+            corner + vec2(dx * 3.0, dy * 3.0)
+        } else {
+            corner
+        };
+        ui.painter().line_segment(
+            [corner, corner + vec2(dx * length, 0.0)],
+            Stroke::new(1.4, color),
+        );
+        ui.painter().line_segment(
+            [corner, corner + vec2(0.0, dy * length)],
+            Stroke::new(1.4, color),
+        );
+    }
+    if hovered {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 fn small_text_button(ui: &mut egui::Ui, label: &str) -> egui::Response {

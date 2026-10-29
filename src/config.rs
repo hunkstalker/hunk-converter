@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::i18n::Lang;
 
-pub const HISTORY_LIMIT: usize = 20;
+pub const HISTORY_LIMIT: usize = 21;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HistoryEntry {
@@ -14,6 +14,7 @@ pub struct HistoryEntry {
 pub struct Settings {
     pub language: Lang,
     pub history: Vec<HistoryEntry>,
+    pub fullscreen: bool,
 }
 
 impl Default for Settings {
@@ -21,6 +22,7 @@ impl Default for Settings {
         Self {
             language: Lang::detect(),
             history: Vec::new(),
+            fullscreen: true,
         }
     }
 }
@@ -56,6 +58,7 @@ impl Settings {
         let mut settings = Self {
             language: Lang::detect(),
             history: Vec::new(),
+            fullscreen: true,
         };
         let mut section = String::new();
         for line in text.lines() {
@@ -76,6 +79,9 @@ impl Settings {
                 if let Some(language) = Lang::from_code(value) {
                     settings.language = language;
                 }
+            } else if section == "general" && key == "fullscreen" {
+                settings.fullscreen =
+                    !matches!(value.to_ascii_lowercase().as_str(), "0" | "false" | "no");
             } else if section == "history"
                 && let Some(index) = key
                     .strip_prefix("color")
@@ -96,7 +102,11 @@ impl Settings {
 
     pub fn save(&self) {
         let mut text = String::from("[general]\n");
-        text.push_str(&format!("language={}\n\n[history]\n", self.language.code()));
+        text.push_str(&format!(
+            "language={}\nfullscreen={}\n\n[history]\n",
+            self.language.code(),
+            u8::from(self.fullscreen)
+        ));
         text.push_str(&format!("count={}\n", self.history.len()));
         for (index, entry) in self.history.iter().take(HISTORY_LIMIT).enumerate() {
             text.push_str(&format!(

@@ -110,10 +110,10 @@
 
 ## t-27 — Historial de colores del cuentagotas
 
-**Descripción:** Añadir un historial de 20 colores integrado en la tarjeta del cuentagotas, con selección por clic izquierdo, bloqueo por clic derecho, limpieza de colores no fijados y persistencia en `config.ini`. Al llenarse, sustituir el color no fijado más antiguo y avisar si todos están fijados.
+**Descripción:** Añadir un historial de 21 colores integrado en la tarjeta del cuentagotas, con selección por clic izquierdo, bloqueo por clic derecho, limpieza de colores no fijados y persistencia en `config.ini`. Al llenarse, sustituir el color no fijado más antiguo y avisar si todos están fijados.
 
 **Completada:** 2026-10-29
-**Resultado:** Historial de 20 colores en tres filas, con candado visible, anillo de selección, papelera para limpiar no fijados y avisos de historial lleno. Verificado con muestreo real, bloqueo, selección y persistencia en config.ini.
+**Resultado:** Historial de 21 colores en tres filas, con candado visible, anillo de selección, papelera para limpiar no fijados y avisos de historial lleno. Verificado con muestreo real, bloqueo, selección y persistencia en config.ini.
 
 ## t-28 — Marca Hunk Converter e icono de máscara de gas
 
@@ -121,3 +121,10 @@
 
 **Completada:** 2026-10-29
 **Resultado:** Cabecera «Hunk Converter / IMAGE TOOLBOX», pie «Rust + egui · Open Source · v0.2.0», icono SVG original de máscara de gas rasterizado a PNG y usado en la ventana y la cabecera.
+
+## t-29 — Pantalla completa persistente
+
+**Descripción:** Abrir la aplicación en pantalla completa por defecto, permitir alternar el modo con un botón y `F11`, y guardar el estado en `config.ini`.
+
+**Completada:** 2026-10-29
+**Resultado:** La app arranca en pantalla completa salvo que `config.ini` indique lo contrario. El icono de la cabecera y `F11` alternan el modo y guardan el estado. En desarrollo, `HUNK_WINDOWED=1` fuerza una ventana normal.

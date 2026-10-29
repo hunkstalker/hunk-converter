@@ -2,6 +2,7 @@
 
 use eframe::egui;
 use hunk_converter::app::HunkApp;
+use hunk_converter::config;
 
 fn main() -> eframe::Result {
     let icon = window_icon();
@@ -15,11 +16,17 @@ fn main() -> eframe::Result {
             ])
         })
         .unwrap_or([1280.0, 800.0]);
+    let mut settings = config::Settings::load();
+    let windowed = std::env::var_os("HUNK_WINDOWED").is_some();
+    let fullscreen = settings.fullscreen && !windowed;
+    settings.fullscreen = fullscreen;
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Hunk Converter · Image Toolbox")
             .with_inner_size(inner_size)
             .with_min_inner_size([1024.0, 800.0])
+            .with_fullscreen(fullscreen)
             .with_icon(icon),
         renderer: eframe::Renderer::Glow,
         centered: true,
@@ -29,7 +36,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "hunk-converter",
         options,
-        Box::new(|cc| Ok(Box::new(HunkApp::new(cc)))),
+        Box::new(move |cc| Ok(Box::new(HunkApp::new(cc, settings)))),
     )
 }
 

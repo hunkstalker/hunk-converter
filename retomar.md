@@ -27,8 +27,9 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación.
-- Historial de 20 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
-- Idioma, historial y bloqueos se guardan en `config.ini`, junto al ejecutable.
+- Historial de 21 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
+- Idioma, historial, bloqueos y pantalla completa se guardan en `config.ini`, junto al ejecutable.
+- La aplicación se abre en pantalla completa; `F11` o el icono de la cabecera alternan el modo.
 - Icono propio de máscara de gas y marca **Hunk Converter / IMAGE TOOLBOX**.
 - Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
 - Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
@@ -71,8 +72,8 @@ Builds portables:
 ## 4. Decisiones que no se deben romper
 
 - **Portapapeles:** `Ctrl+V` intenta leer una imagen del portapapeles y sustituye la imagen actual; si no hay imagen, no hace nada.
-- **Idioma:** `config.ini` guarda el idioma (es/ca/en) y el historial; en el primer arranque se detecta el idioma del sistema.
-- **Historial:** 20 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa.
+- **Idioma:** `config.ini` guarda el idioma (es/ca/en), el historial y la pantalla completa; en el primer arranque se detecta el idioma del sistema.
+- **Historial:** 21 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa.
 - **Cuentagotas:** el clic derecho sobre la imagen lo desactiva. Los botones de copia son iconos y muestran un aviso temporal.
 - **Marca:** el nombre visible es **Hunk Converter**; el nombre técnico del binario sigue siendo `hunk-converter`.
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
@@ -97,7 +98,7 @@ Builds portables:
 ```text
 src/main.rs                  eframe, ventana e icono
 src/app.rs                   UI, estado, cuentagotas, historial, hilos y exportación
-src/config.rs                config.ini, idioma e historial
+src/config.rs                config.ini, idioma, historial y pantalla
 src/i18n.rs                  Traducciones es/ca/en
 src/core/codec.rs            Carga/decodificación/codificación
 src/core/color.rs            Códigos de color y aplanado
@@ -119,7 +120,7 @@ t-completadas.md            Tareas cerradas
 ## 6. Tareas
 
 - Pendientes: `todo.md` (t-10 a t-13, t-15 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27 y t-28).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27, t-28 y t-29).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 

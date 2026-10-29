@@ -65,6 +65,8 @@ pub fn install(ctx: &egui::Context) {
     style.spacing.button_padding = egui::vec2(14.0, 8.0);
     style.spacing.slider_width = 230.0;
     style.spacing.interact_size.y = 32.0;
+    style.spacing.scroll = egui::style::ScrollStyle::solid();
+    style.spacing.scroll.bar_width = 8.0;
 
     let visuals = &mut style.visuals;
     *visuals = egui::Visuals::dark();

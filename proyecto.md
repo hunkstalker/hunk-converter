@@ -86,14 +86,14 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - El muestreo no mueve el divisor del comparador.
 - En modo ICO se desactiva, porque la vista no representa la imagen original.
 - La muestra y el zoom se reinician al cargar otra imagen o reiniciar la sesión.
-- **Historial:** 20 colores en tres filas. Clic izquierdo selecciona; clic derecho fija o libera. El color no fijado más antiguo se reemplaza cuando está lleno. El botón de papelera limpia los no fijados.
+- **Historial:** 21 colores en tres filas. Clic izquierdo selecciona; clic derecho fija o libera. El color no fijado más antiguo se reemplaza cuando está lleno. El botón de papelera limpia los no fijados.
 - El historial y los bloqueos se guardan en `config.ini`.
 
 ### 3.5 Idiomas y configuración
 
 - Selector **ES / CA / EN** junto al botón de reinicio.
 - En el primer arranque se detecta el idioma del sistema con `sys-locale`.
-- La preferencia, el historial y los bloqueos se guardan en `config.ini`, junto al ejecutable.
+- La preferencia, el historial, los bloqueos y el estado de pantalla completa se guardan en `config.ini`, junto al ejecutable.
 - Si el archivo no es escribible, la app sigue funcionando sin persistencia.
 
 ### 3.6 Exportación
@@ -114,6 +114,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | `Ctrl+V` | Pegar una imagen del portapapeles |
 | `Ctrl+E` | Exportar |
 | `Ctrl+R` | Reiniciar la sesión |
+| `F11` | Alternar pantalla completa |
 | `←` / `→` | Mover el divisor |
 | `Inicio` / `Fin` | Extremos del divisor |
 
@@ -134,7 +135,8 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 
 ### Ventana y distribución
 
-- Tamaño inicial 1280 × 800; mínimo 1024 × 800.
+- La aplicación se abre en pantalla completa. `F11` o el icono de la cabecera alternan el modo; el estado se guarda en `config.ini`.
+- Tamaño de ventana por defecto 1280 × 800; mínimo 1024 × 800.
 - Cabecera con marca, selector de idioma y botón de reinicio.
 - La barra lateral tiene scroll vertical cuando el historial y el cuentagotas no caben; el botón de exportar queda fijo abajo.
 - Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, historial de colores, cuentagotas y exportación.
@@ -174,7 +176,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | --- | --- |
 | `src/main.rs` | Arranque de eframe, ventana, icono e inicialización |
 | `src/app.rs` | Estado, UI, interacción, cuentagotas, historial, hilos y exportación |
-| `src/config.rs` | `config.ini`, idioma e historial |
+| `src/config.rs` | `config.ini`, idioma, historial y pantalla completa |
 | `src/i18n.rs` | Traducciones español/catalán/inglés |
 | `src/core/codec.rs` | Carga, decodificación, codificación y previews |
 | `src/core/color.rs` | Códigos de color y aplanado RGBA |
@@ -247,7 +249,7 @@ Archivo local
 
 - En una build: `<carpeta del ejecutable>/export/`.
 - En desarrollo: `target/release/export/`.
-- `config.ini` se crea junto al ejecutable y guarda idioma e historial.
+- `config.ini` se crea junto al ejecutable y guarda idioma, historial y pantalla completa.
 - Los nombres no se sobrescriben.
 
 ### Estructura de la build

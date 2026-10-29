@@ -27,7 +27,8 @@
 ## Historial de colores
 
 - Integrado en la tarjeta del cuentagotas, no es una tarjeta independiente.
-- 20 colores en tres filas de 7/7/6 muestras de 32 px.
+- 21 colores en tres filas de 7 muestras de 32 px. La tarjeta queda anclada
+  abajo, con los ajustes en un área con scroll por encima y Exportar fijo.
 - Clic izquierdo: selecciona el color, actualiza los códigos y desactiva el
   cuentagotas. No muestra coordenadas ni marca de píxel.
 - Clic derecho: fija o libera el color. Las muestras fijadas llevan candado y no
@@ -48,8 +49,12 @@
 - Se eliminó el pill «100 % LOCAL» y el texto de resolución junto a «Vista
   previa».
 - La reducción de peso aparece como texto junto al resultado, sin pill.
-- La barra lateral tiene scroll vertical cuando el contenido no cabe; el botón
-  de exportar queda fijo abajo.
+- La barra lateral mantiene los ajustes con scroll y ancla la tarjeta del color
+  y el botón de exportar abajo.
+- Los toasts se miden con el texto real, con ancho máximo y ajuste de varias
+  líneas.
+- La aplicación arranca en pantalla completa. El icono de la cabecera y `F11`
+  alternan el modo, que se guarda en `config.ini`.
 
 ## Verificación
 
@@ -66,10 +71,10 @@
 
 ## Medidas finales
 
-- Ejecutable Linux: 16.563.200 B (15,8 MiB).
-- Ejecutable Windows: 15.117.312 B (14,4 MiB).
-- Arranque a ventana: 199,4 ms de mediana (20 arranques).
+- Ejecutable Linux: 16.570.008 B (15,8 MiB).
+- Ejecutable Windows: 15.121.408 B (14,4 MiB).
+- Arranque a ventana: 193,0 ms de mediana (20 arranques).
 - RSS en reposo: 102,1 MiB.
-- RSS con imagen 12 MP: 212,4 MiB.
+- RSS con imagen 12 MP: 212,6 MiB.
 - El paquete Linux creó `config.ini` junto al ejecutable en el primer
   arranque y detectó el idioma catalán.

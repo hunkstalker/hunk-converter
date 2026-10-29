@@ -22,8 +22,9 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
 - **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con botones de copia y confirmación visual.
-- **Historial de colores:** 20 colores en dos filas de siete y una de seis, con bloqueo y limpieza.
+- **Historial de colores:** 21 colores en tres filas de siete, con bloqueo y limpieza.
 - **Idiomas:** español, catalán e inglés, con detección del sistema y preferencia guardada.
+- **Pantalla completa:** se abre así por defecto; `F11` o el icono de la cabecera la alternan y el estado se guarda.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
 - **PNG y JPEG XL sin pérdida**, con transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
@@ -48,7 +49,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 
 ## Historial de colores
 
-- Se guardan automáticamente los últimos **20 colores** muestreados.
+- Se guardan automáticamente los últimos **21 colores** muestreados.
 - **Clic izquierdo** en una muestra: usa ese color y actualiza los códigos.
 - **Clic derecho** en una muestra: la fija o la libera. Las muestras fijadas llevan un candado y no se reemplazan.
 - Cuando el historial está lleno, se sustituye el color no fijado más antiguo.
@@ -60,7 +61,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 
 - Selector **ES / CA / EN** en la cabecera.
 - En el primer arranque se detecta el idioma del sistema.
-- El idioma elegido, el historial y los bloqueos se guardan en `config.ini`, junto al ejecutable.
+- El idioma elegido, el historial, los bloqueos y el estado de pantalla completa se guardan en `config.ini`, junto al ejecutable.
 - Si no se puede escribir el archivo, la aplicación sigue funcionando sin persistencia.
 
 ## Zoom y navegación
@@ -115,6 +116,7 @@ El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se
 | `Ctrl+V` | Pegar una imagen del portapapeles |
 | `Ctrl+E` | Exportar |
 | `Ctrl+R` | Reiniciar la aplicación |
+| `F11` | Alternar pantalla completa |
 | `←` / `→` | Mover el divisor del comparador |
 | `Inicio` / `Fin` | Llevar el divisor a un extremo |
 
