@@ -24,9 +24,9 @@
 
 **Descripción:** Internacionalizar todos los textos de interfaz, avisos, tooltips y documentación de usuario, con español como idioma predeterminado e inglés como alternativa. Incluir un selector de idioma y recordar la preferencia de forma local.
 
-## t-15 — Formatos AVIF, HEIC y JPEG XL
+## t-15 — Entrada HEIC y códecs opcionales
 
-**Descripción:** Evaluar e integrar decodificación y/o codificación AVIF, HEIC y JPEG XL manteniendo la portabilidad. AVIF y JPEG XL deben poder seleccionarse como formato de salida cuando sus códecs estén disponibles; HEIC puede limitarse a entrada si la licencia o las dependencias lo aconsejan. La funcionalidad debe ser opcional, claramente marcada si requiere bibliotecas externas y no debe romper las builds actuales ni introducir llamadas de red.
+**Descripción:** Evaluar HEIC como formato de entrada manteniendo la portabilidad y sin introducir llamadas de red. AVIF y JPEG XL ya están integrados como salida (`t-26`); queda valorar si los códecs pesados deben poder excluirse mediante features de Cargo y documentar el impacto en tamaño y compilación.
 
 ## t-16 — Navegación avanzada del lienzo
 

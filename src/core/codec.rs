@@ -1,9 +1,13 @@
 use std::io::Cursor;
 use std::path::Path;
 
+use image::codecs::avif::AvifEncoder;
 use image::codecs::jpeg::JpegEncoder;
-use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder, ImageFormat, RgbaImage, imageops};
+use zune_core::bit_depth::BitDepth as ZuneBitDepth;
+use zune_core::colorspace::ColorSpace;
+use zune_core::options::EncoderOptions as ZuneEncoderOptions;
+use zune_jpegxl::JxlSimpleEncoder;
 
 use super::color::flatten_rgba;
 use super::ico::{IcoOutput, encode_ico};
@@ -19,10 +23,19 @@ pub enum OutputFormat {
     Jpg,
     Png,
     Ico,
+    Avif,
+    Jxl,
 }
 
 impl OutputFormat {
-    pub const ALL: [Self; 4] = [Self::Webp, Self::Jpg, Self::Png, Self::Ico];
+    pub const ALL: [Self; 6] = [
+        Self::Webp,
+        Self::Jpg,
+        Self::Png,
+        Self::Avif,
+        Self::Jxl,
+        Self::Ico,
+    ];
 
     pub fn label(self) -> &'static str {
         match self {
@@ -30,6 +43,8 @@ impl OutputFormat {
             Self::Jpg => "JPG",
             Self::Png => "PNG",
             Self::Ico => "ICO",
+            Self::Avif => "AVIF",
+            Self::Jxl => "JPEG XL",
         }
     }
 
@@ -39,15 +54,19 @@ impl OutputFormat {
             Self::Jpg => "JPG",
             Self::Png => "PNG",
             Self::Ico => "ICO",
+            Self::Avif => "AVIF",
+            Self::Jxl => "JXL",
         }
     }
 
     pub fn hint(self) -> &'static str {
         match self {
-            Self::Webp => "Equilibrio ideal",
-            Self::Jpg => "Máxima compatibilidad",
+            Self::Webp => "Equilibrio",
+            Self::Jpg => "Compatible",
             Self::Png => "Sin pérdida",
-            Self::Ico => "Icono de Windows",
+            Self::Ico => "Windows",
+            Self::Avif => "Moderno",
+            Self::Jxl => "Sin pérdida",
         }
     }
 
@@ -57,11 +76,13 @@ impl OutputFormat {
             Self::Jpg => "jpg",
             Self::Png => "png",
             Self::Ico => "ico",
+            Self::Avif => "avif",
+            Self::Jxl => "jxl",
         }
     }
 
     pub fn is_lossy(self) -> bool {
-        matches!(self, Self::Webp | Self::Jpg)
+        matches!(self, Self::Webp | Self::Jpg | Self::Avif)
     }
 }
 
@@ -69,6 +90,7 @@ impl OutputFormat {
 pub struct EncodeOptions {
     pub format: OutputFormat,
     pub quality: u8,
+    pub compression: u8,
     pub ico_sizes: Vec<u32>,
     pub background: [u8; 4],
 }
@@ -126,19 +148,72 @@ pub fn encode(source: &RgbaImage, options: &EncodeOptions) -> Result<EncodedOutp
         }
         OutputFormat::Png => {
             let mut bytes = Vec::new();
-            PngEncoder::new_with_quality(
-                Cursor::new(&mut bytes),
-                CompressionType::Default,
-                FilterType::Adaptive,
-            )
-            .write_image(
-                source.as_raw(),
-                source.width(),
-                source.height(),
-                ExtendedColorType::Rgba8,
-            )
-            .map_err(|error| format!("No se pudo codificar el PNG: {error}"))?;
+            {
+                let mut encoder =
+                    png::Encoder::new(Cursor::new(&mut bytes), source.width(), source.height());
+                encoder.set_color(png::ColorType::Rgba);
+                encoder.set_depth(png::BitDepth::Eight);
+                let compression = options.compression.min(100);
+                let deflate = if compression == 0 {
+                    png::DeflateCompression::NoCompression
+                } else {
+                    let level = 1 + ((u16::from(compression) - 1) * 8 / 99) as u8;
+                    png::DeflateCompression::Level(level)
+                };
+                encoder.set_deflate_compression(deflate);
+                encoder.set_filter(png::Filter::Adaptive);
+                let mut writer = encoder
+                    .write_header()
+                    .map_err(|error| format!("No se pudo iniciar el PNG: {error}"))?;
+                writer
+                    .write_image_data(source.as_raw())
+                    .map_err(|error| format!("No se pudo codificar el PNG: {error}"))?;
+            }
             let preview = decode_preview(ImageFormat::Png, &bytes)?;
+            EncodedOutput {
+                bytes,
+                preview,
+                width: source.width(),
+                height: source.height(),
+                frame_count: 1,
+                ico_sizes: Vec::new(),
+            }
+        }
+        OutputFormat::Avif => {
+            let mut bytes = Vec::new();
+            AvifEncoder::new_with_speed_quality(Cursor::new(&mut bytes), 4, quality)
+                .write_image(
+                    source.as_raw(),
+                    source.width(),
+                    source.height(),
+                    ExtendedColorType::Rgba8,
+                )
+                .map_err(|error| format!("No se pudo codificar el AVIF: {error}"))?;
+            let preview = decode_avif_preview(&bytes)?;
+            EncodedOutput {
+                bytes,
+                preview,
+                width: source.width(),
+                height: source.height(),
+                frame_count: 1,
+                ico_sizes: Vec::new(),
+            }
+        }
+        OutputFormat::Jxl => {
+            let compression = options.compression.min(100);
+            let effort = ((u16::from(compression) * 9) / 100) as u8;
+            let jxl_options = ZuneEncoderOptions::new(
+                source.width() as usize,
+                source.height() as usize,
+                ColorSpace::RGBA,
+                ZuneBitDepth::Eight,
+            )
+            .set_effort(effort);
+            let mut bytes = Vec::new();
+            JxlSimpleEncoder::new(source.as_raw(), jxl_options)
+                .encode(&mut bytes)
+                .map_err(|error| format!("No se pudo codificar el JPEG XL: {error}"))?;
+            let preview = decode_jxl_preview(&bytes)?;
             EncodedOutput {
                 bytes,
                 preview,
@@ -175,6 +250,98 @@ fn decode_preview(format: ImageFormat, bytes: &[u8]) -> Result<RgbaImage, String
     image::load_from_memory_with_format(bytes, format)
         .map(|image| image.to_rgba8())
         .map_err(|error| format!("No se pudo decodificar la vista previa: {error}"))
+}
+
+fn u16_to_u8(value: u16) -> u8 {
+    ((u32::from(value) * 255 + 32_767) / 65_535) as u8
+}
+
+fn decode_avif_preview(bytes: &[u8]) -> Result<RgbaImage, String> {
+    let image = avif_decode::Decoder::from_avif(bytes)
+        .and_then(|decoder| decoder.to_image())
+        .map_err(|error| format!("No se pudo decodificar la vista previa AVIF: {error}"))?;
+
+    let (width, height, pixels) = match image {
+        avif_decode::Image::Rgba8(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| [pixel.r, pixel.g, pixel.b, pixel.a])
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+        avif_decode::Image::Rgb8(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| [pixel.r, pixel.g, pixel.b, 255])
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+        avif_decode::Image::Gray8(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| {
+                    let value = pixel.value();
+                    [value, value, value, 255]
+                })
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+        avif_decode::Image::Rgba16(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| {
+                    [
+                        u16_to_u8(pixel.r),
+                        u16_to_u8(pixel.g),
+                        u16_to_u8(pixel.b),
+                        u16_to_u8(pixel.a),
+                    ]
+                })
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+        avif_decode::Image::Rgb16(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| {
+                    [
+                        u16_to_u8(pixel.r),
+                        u16_to_u8(pixel.g),
+                        u16_to_u8(pixel.b),
+                        255,
+                    ]
+                })
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+        avif_decode::Image::Gray16(image) => {
+            let pixels = image
+                .buf()
+                .iter()
+                .flat_map(|pixel| {
+                    let value = u16_to_u8(pixel.value());
+                    [value, value, value, 255]
+                })
+                .collect();
+            (image.width() as u32, image.height() as u32, pixels)
+        }
+    };
+
+    RgbaImage::from_raw(width, height, pixels)
+        .ok_or_else(|| "El AVIF no produjo una imagen válida.".to_owned())
+}
+
+fn decode_jxl_preview(bytes: &[u8]) -> Result<RgbaImage, String> {
+    let decoder = jxl_oxide::integration::JxlDecoder::new(Cursor::new(bytes))
+        .map_err(|error| format!("No se pudo decodificar la vista previa JPEG XL: {error}"))?;
+    let image = image::DynamicImage::from_decoder(decoder)
+        .map_err(|error| format!("No se pudo decodificar la vista previa JPEG XL: {error}"))?;
+    Ok(image.to_rgba8())
 }
 
 fn bounded_preview(image: &RgbaImage) -> RgbaImage {
@@ -330,12 +497,19 @@ mod tests {
     #[test]
     fn encodes_supported_formats() {
         let source = noise(120, 80);
-        for format in [OutputFormat::Webp, OutputFormat::Jpg, OutputFormat::Png] {
+        for format in [
+            OutputFormat::Webp,
+            OutputFormat::Jpg,
+            OutputFormat::Png,
+            OutputFormat::Avif,
+            OutputFormat::Jxl,
+        ] {
             let output = encode(
                 &source,
                 &EncodeOptions {
                     format,
                     quality: 82,
+                    compression: 70,
                     ico_sizes: Vec::new(),
                     background: [255, 255, 255, 255],
                 },
@@ -355,6 +529,7 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Webp,
                 quality: 20,
+                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },
@@ -365,12 +540,31 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Webp,
                 quality: 92,
+                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },
         )
         .unwrap();
         assert!(low.bytes.len() < high.bytes.len());
+    }
+
+    #[test]
+    fn jxl_preserves_alpha() {
+        let mut source = RgbaImage::new(8, 8);
+        source.put_pixel(2, 2, Rgba([255, 0, 0, 128]));
+        let output = encode(
+            &source,
+            &EncodeOptions {
+                format: OutputFormat::Jxl,
+                quality: 82,
+                compression: 70,
+                ico_sizes: Vec::new(),
+                background: [255; 4],
+            },
+        )
+        .unwrap();
+        assert_eq!(output.preview.get_pixel(2, 2).0[3], 128);
     }
 
     #[test]
@@ -382,6 +576,7 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Png,
                 quality: 82,
+                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },

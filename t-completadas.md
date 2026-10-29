@@ -85,7 +85,7 @@
 **Descripción:** Convertir el piloto en la aplicación principal, completar la paridad imprescindible del producto, reemplazar el selector de color de fondo por el cuentagotas, añadir soporte SVG, renombrar la aplicación a hunk-converter 0.2.0, empaquetar Linux y Windows, actualizar documentación y archivar el prototipo Godot.
 
 **Completada:** 2026-10-28
-**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 9 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.
+**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 10 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.
 
 ## t-25 — Zoom con rueda y paneo del lienzo
 
@@ -93,3 +93,10 @@
 
 **Completada:** 2026-10-29
 **Resultado:** Zoom de 100 % a 800 % con la rueda, anclado al cursor y limitado para no perder la imagen. Paneo con clic derecho y cursor de agarre. El porcentaje aparece en la cabecera y se puede pulsar para volver al ajuste inicial. El divisor, el cuentagotas y la marca de muestreo se adaptan al zoom y al desplazamiento. Verificado con rueda y arrastre reales bajo Xvfb.
+
+## t-26 — Salida AVIF y JPEG XL
+
+**Descripción:** Añadir AVIF y JPEG XL como formatos de salida, con vista previa fiel del archivo codificado, control de calidad o compresión, exportación portable y soporte en las builds Linux y Windows.
+
+**Completada:** 2026-10-29
+**Resultado:** AVIF con calidad 1–100 y JPEG XL sin pérdida con compresión 0–100. Las vistas previas se decodifican con `avif-decode` y `jxl-oxide`. Se añadió `png` para compresión PNG ajustable, se reorganizó la rejilla de formatos y se corrigieron los badges del comparador. Verificado con pruebas y exportación real AVIF/JPEG XL.

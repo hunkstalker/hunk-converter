@@ -7,7 +7,7 @@
 
 **hunk-converter** es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. Está hecha en **Rust + egui**, usa el renderizador **glow** y no requiere instalador.
 
-Puede exportar WebP, JPG, PNG e ICO. La vista previa compara el original con el archivo codificado real. Incluye un cuentagotas que obtiene colores de la imagen y muestra sus códigos HEX/RGB/RGBA/HSL. Los resultados se guardan en `export/`, junto al ejecutable.
+Puede exportar WebP, AVIF, JPG, PNG, JPEG XL e ICO. La vista previa compara el original con el archivo codificado real. Incluye un cuentagotas que obtiene colores de la imagen y muestra sus códigos HEX/RGB/RGBA/HSL. Los resultados se guardan en `export/`, junto al ejecutable.
 
 Ruta principal:
 
@@ -22,8 +22,8 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Interfaz completa en español y tema oscuro propio.
 - Carga por arrastre, selector nativo o argumento de línea de comandos.
 - Entrada: PNG, JPG, WebP, BMP, TGA y SVG.
-- Salida: WebP, JPG, PNG e ICO.
-- Calidad 1–100 para WebP/JPG; PNG sin pérdida; JPG aplanado sobre blanco.
+- Salida: WebP, AVIF, JPG, PNG, JPEG XL e ICO.
+- Calidad 1–100 para WebP/JPG/AVIF; compresión 0–100 para PNG y JPEG XL sin pérdida; JPG aplanado sobre blanco.
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas y códigos HEX/RGB/RGBA/HSL; copia al portapapeles.
@@ -32,7 +32,7 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Reinicio, atajos y avisos de error.
 - **Render bajo demanda:** sin repintado de UI cuando la ventana está quieta.
 - Builds portables de Linux y Windows; assets y fuente embebidos.
-- **9 pruebas Rust**, clippy y formato limpios.
+- **10 pruebas Rust**, clippy y formato limpios.
 - CI de Rust en GitHub Actions.
 - Benchmark comparativo completo en `docs/benchmark-2026-10-28.md`.
 
@@ -75,7 +75,10 @@ Builds portables:
 - **Vista:** el zoom se reinicia al cargar otra imagen o reiniciar; el encuadre se conserva al cambiar de formato.
 - **JPG:** transparencia compuesta sobre blanco.
 - **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
-- **Calidad inicial:** 82 %.
+- **Calidad inicial:** 82 %; compresión inicial: 70 %.
+- **PNG y JPEG XL:** sin pérdida; sus deslizadores controlan compresión/esfuerzo, no calidad.
+- **AVIF:** salida con pérdida y control de calidad; vista previa decodificada con `avif-decode`.
+- **Badges del comparador:** el formato de salida va a la izquierda y `ORIGINAL` a la derecha, igual que las mitades visibles.
 - **Reinicio:** restablece formato, calidad, tamaños y muestra de color.
 - **Privacidad:** sin red, cuentas ni telemetría.
 - **Render:** no añadir animaciones permanentes ni bucles de repintado innecesarios. Cualquier animación debe justificar sus frames.
@@ -105,7 +108,7 @@ t-completadas.md            Tareas cerradas
 ## 6. Tareas
 
 - Pendientes: `todo.md` (t-10 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20, t-21 y t-25).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20, t-21, t-25 y t-26).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 
@@ -118,6 +121,7 @@ El informe completo está en `docs/benchmark-2026-10-28.md`.
 - La versión Rust es mucho más pequeña que el prototipo Godot, arranca antes, usa menos RAM y es más rápida codificando.
 - La CPU en reposo del prototipo Godot medida bajo llvmpipe no representa un equipo con GPU, pero sí evidencia el repintado continuo.
 - La ventaja de velocidad no viene de paralelismo: los códecs principales trabajan en un solo núcleo.
+- AVIF y JPEG XL no se incluyeron en la comparación de velocidad; solo WebP/JPG/PNG/ICO.
 - No se midieron PSNR/SSIM.
 
 Pendientes conocidos:
@@ -125,7 +129,7 @@ Pendientes conocidos:
 - EXIF y metadatos (`t-10`).
 - Redimensión y lotes (`t-11`, `t-12`).
 - Modo 1:1, botones/gestos de zoom y atajos de encuadre (`t-16`).
-- AVIF/HEIC/JPEG XL (`t-15`).
+- HEIC (`t-15`); AVIF y JPEG XL ya están integrados como salida.
 - Accesibilidad completa (`t-22`).
 - Validación Windows (`t-23`) e icono del ejecutable (`t-24`).
 - Build macOS (`t-17`).

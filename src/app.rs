@@ -27,6 +27,7 @@ pub struct HunkApp {
     brand_icon: Option<TextureHandle>,
     format: OutputFormat,
     quality: u8,
+    compression: u8,
     ico_selected: [bool; 6],
     eyedropper_active: bool,
     sampled_color: Option<[u8; 4]>,
@@ -103,6 +104,7 @@ impl HunkApp {
             brand_icon,
             format: OutputFormat::Webp,
             quality: 82,
+            compression: 70,
             ico_selected: [true; 6],
             eyedropper_active: false,
             sampled_color: None,
@@ -131,6 +133,8 @@ impl HunkApp {
                 "jpg" | "jpeg" => OutputFormat::Jpg,
                 "png" => OutputFormat::Png,
                 "ico" => OutputFormat::Ico,
+                "avif" => OutputFormat::Avif,
+                "jxl" | "jpegxl" => OutputFormat::Jxl,
                 _ => OutputFormat::Webp,
             };
             app.set_format(format, &cc.egui_ctx);
@@ -237,6 +241,7 @@ impl HunkApp {
         let options = EncodeOptions {
             format: self.format,
             quality: self.quality,
+            compression: self.compression,
             ico_sizes: self.selected_ico_sizes(),
             background: [255, 255, 255, 255],
         };
@@ -415,6 +420,7 @@ impl HunkApp {
         self.result = None;
         self.format = OutputFormat::Webp;
         self.quality = 82;
+        self.compression = 70;
         self.ico_selected = [true; 6];
         self.split = 0.5;
         self.zoom = MIN_ZOOM;
@@ -592,17 +598,16 @@ impl HunkApp {
             .frame(Frame::new().fill(T::BG).inner_margin(Margin {
                 left: 30,
                 right: 20,
-                top: 8,
+                top: 14,
                 bottom: 14,
             }))
             .show(root, |ui| {
                 T::sidebar_frame().show(ui, |ui| {
-                    // Deja aire abajo para que se vean las esquinas redondeadas.
-                    ui.set_min_height((ui.available_height() - 18.0).max(160.0));
+                    ui.set_min_height(ui.available_height());
                     ui.set_width(ui.available_width());
 
-                    // Reserva espacio para el cuentagotas, la exportación y el margen inferior.
-                    let top_height = (ui.available_height() - 248.0).max(160.0);
+                    // Reserva espacio para la calidad, el cuentagotas y la exportación.
+                    let top_height = (ui.available_height() - 335.0).max(160.0);
                     egui::ScrollArea::vertical()
                         .id_salt("sidebar_scroll")
                         .auto_shrink([false, false])
@@ -620,6 +625,12 @@ impl HunkApp {
                             );
                         });
 
+                    ui.add_space(6.0);
+                    if self.format == OutputFormat::Ico {
+                        self.show_ico_sizes(ui, &ctx);
+                    } else {
+                        self.show_quality(ui, &ctx);
+                    }
                     ui.add_space(6.0);
                     self.show_color_panel(ui, &ctx);
                     ui.add_space(8.0);
@@ -684,64 +695,72 @@ impl HunkApp {
         ui.label(T::eyebrow("FORMATO DE SALIDA"));
         ui.add_space(6.0);
 
-        let card_width = (ui.available_width() - 8.0) / 2.0;
+        let gap = 6.0;
+        let card_width = (ui.available_width() - gap * 2.0) / 3.0;
         let mut requested_format = None;
-        for row in 0..2 {
+        for (row, formats) in OutputFormat::ALL.chunks(3).enumerate() {
             ui.horizontal(|ui| {
-                for column in 0..2 {
-                    let format = OutputFormat::ALL[row * 2 + column];
-                    if format_card(ui, format, self.format, card_width).clicked() {
-                        requested_format = Some(format);
+                for (column, format) in formats.iter().enumerate() {
+                    if format_card(ui, *format, self.format, card_width).clicked() {
+                        requested_format = Some(*format);
                     }
-                    if column == 0 {
-                        ui.add_space(8.0);
+                    if column + 1 < formats.len() {
+                        ui.add_space(gap);
                     }
                 }
             });
-            if row == 0 {
-                ui.add_space(8.0);
+            if row + 1 < OutputFormat::ALL.len().div_ceil(3) {
+                ui.add_space(gap);
             }
         }
         if let Some(format) = requested_format {
             self.set_format(format, ctx);
         }
-
-        ui.add_space(10.0);
-        if self.format == OutputFormat::Ico {
-            self.show_ico_sizes(ui, ctx);
-        } else {
-            self.show_quality(ui, ctx);
-        }
     }
 
     fn show_quality(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let lossy = self.format.is_lossy();
         let hint = match self.format {
-            OutputFormat::Png => "PNG conserva cada píxel y la transparencia.",
+            OutputFormat::Png => "Más compresión tarda más; el PNG sigue siendo sin pérdida.",
+            OutputFormat::Jxl => "JPEG XL es sin pérdida; más compresión tarda más.",
             _ => "Más calidad conserva más detalle y aumenta el peso.",
         };
+        let value = if lossy {
+            self.quality
+        } else {
+            self.compression
+        };
         let header = ui.horizontal(|ui| {
-            ui.label(T::eyebrow("CALIDAD"));
+            ui.label(T::eyebrow(if lossy { "CALIDAD" } else { "COMPRESIÓN" }));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let value = if self.format.is_lossy() {
-                    format!("{} %", self.quality)
-                } else {
-                    "Sin pérdida".to_owned()
-                };
-                ui.label(RichText::new(value).size(12.0).color(T::TEXT));
+                ui.label(
+                    RichText::new(format!("{value} %"))
+                        .size(12.0)
+                        .color(T::TEXT),
+                );
             });
         });
         header.response.on_hover_text(hint);
 
-        if self.format.is_lossy() {
-            ui.add_space(3.0);
+        ui.add_space(3.0);
+        ui.spacing_mut().slider_width = (ui.available_width() - 8.0).max(120.0);
+        let changed = if lossy {
             let slider = egui::Slider::new(&mut self.quality, 1..=100)
                 .show_value(false)
                 .trailing_fill(true);
-            let response = ui.add_sized([ui.available_width(), 22.0], slider);
+            let response = ui.add(slider);
             response.clone().on_hover_text(hint);
-            if response.changed() {
-                self.request_encode(ctx, Some(Duration::from_millis(ENCODE_DELAY_MS)));
-            }
+            response.changed()
+        } else {
+            let slider = egui::Slider::new(&mut self.compression, 0..=100)
+                .show_value(false)
+                .trailing_fill(true);
+            let response = ui.add(slider);
+            response.clone().on_hover_text(hint);
+            response.changed()
+        };
+        if changed {
+            self.request_encode(ctx, Some(Duration::from_millis(ENCODE_DELAY_MS)));
         }
     }
 
@@ -1274,17 +1293,17 @@ impl HunkApp {
             &canvas,
             view_rect.left_top() + vec2(10.0, 10.0),
             Align2::LEFT_TOP,
-            "ORIGINAL",
-            Color32::from_rgba_unmultiplied(10, 13, 16, 225),
-            T::TEXT,
+            self.format.badge(),
+            T::ACCENT,
+            T::ACCENT_INK,
         );
         paint_badge(
             &canvas,
             view_rect.right_top() + vec2(-10.0, 10.0),
             Align2::RIGHT_TOP,
-            self.format.badge(),
-            T::ACCENT,
-            T::ACCENT_INK,
+            "ORIGINAL",
+            Color32::from_rgba_unmultiplied(10, 13, 16, 225),
+            T::TEXT,
         );
     }
     fn show_preview_footer(&mut self, ui: &mut egui::Ui) {
@@ -1651,7 +1670,7 @@ fn format_card(
     current: OutputFormat,
     width: f32,
 ) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(width, 58.0), Sense::click());
+    let (rect, response) = ui.allocate_exact_size(vec2(width, 50.0), Sense::click());
     let selected = format == current;
     let hovered = response.hovered();
     let fill = if selected {
@@ -1679,14 +1698,14 @@ fn format_card(
         StrokeKind::Inside,
     );
     ui.painter().text(
-        rect.left_top() + vec2(12.0, 10.0),
+        rect.left_top() + vec2(10.0, 10.0),
         Align2::LEFT_TOP,
         format.label(),
         FontId::proportional(13.5),
         T::TEXT,
     );
     ui.painter().text(
-        rect.left_bottom() + vec2(12.0, -10.0),
+        rect.left_bottom() + vec2(10.0, -10.0),
         Align2::LEFT_BOTTOM,
         format.hint(),
         FontId::proportional(9.5),

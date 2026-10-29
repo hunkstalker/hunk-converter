@@ -45,12 +45,15 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | Formato | Extensión | Compresión | Transparencia | Uso |
 | --- | --- | --- | --- | --- |
 | WebP | `.webp` | Con pérdida, calidad 1–100 | Sí | Opción recomendada |
+| AVIF | `.avif` | Con pérdida, calidad 1–100 | Sí | Compresión moderna |
 | JPG | `.jpg` | Con pérdida, calidad 1–100 | No; fondo blanco | Compatibilidad |
-| PNG | `.png` | Sin pérdida | Sí | Calidad pixel a pixel |
+| PNG | `.png` | Sin pérdida, compresión 0–100 | Sí | Calidad pixel a pixel |
+| JPEG XL | `.jxl` | Sin pérdida, compresión 0–100 | Sí | Alternativa moderna sin pérdida |
 | ICO | `.ico` | PNG por tamaño | Sí | Iconos de Windows |
 
-- Calidad inicial: **82 %**.
-- WebP y JPG muestran deslizador; PNG conserva todos los píxeles; ICO usa selección de tamaños.
+- Calidad inicial: **82 %**; compresión inicial: **70 %**.
+- WebP, JPG y AVIF muestran deslizador de calidad; PNG y JPEG XL muestran compresión; ICO usa selección de tamaños.
+- AVIF y JPEG XL se añaden como formatos de salida. JPEG XL se codifica sin pérdida; el deslizador ajusta el esfuerzo de compresión.
 - JPG aplana la transparencia sobre blanco de forma predecible.
 - ICO incluye 16, 32, 48, 64, 128 y 256 px, ajustando la imagen centrada en un lienzo transparente sin recortar.
 - Se exige al menos un tamaño ICO seleccionado.
@@ -123,7 +126,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Tamaño inicial 1280 × 800; mínimo 1024 × 800.
 - Cabecera con marca, estado local y reinicio.
 - Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, cuentagotas y exportación.
-- La tarjeta lateral conserva margen derecho e inferior para que sus cuatro esquinas redondeadas se vean completas.
+- La tarjeta lateral conserva los radios superiores y las esquinas inferiores cuadradas, con margen derecho y separación respecto a la cabecera.
 - Zona principal con cabecera de vista previa, lienzo y pie de pesos.
 - Pie global con estado del proyecto y versión.
 - El cuentagotas permanece visible y se sitúa por encima del botón de exportar.
@@ -141,8 +144,11 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 
 - **Rust 1.99.1**, fijado en `rust-toolchain.toml`.
 - **eframe/egui 0.37** con renderizador **glow** (OpenGL).
-- `image` 0.25 para decodificación PNG/JPG/WebP/BMP/TGA.
+- `image` 0.25 para decodificación PNG/JPG/WebP/BMP/TGA y codificación AVIF.
 - `webp`/libwebp para codificación WebP.
+- `png` 0.18 para niveles de compresión PNG.
+- `avif-decode`/rav1d para la vista previa AVIF.
+- `zune-jpegxl` para codificación JPEG XL y `jxl-oxide` para su vista previa.
 - `resvg` 0.49 para SVG.
 - `rfd` para diálogo de archivos nativo.
 - Procesamiento en un hilo con canal `std::sync::mpsc`.
@@ -241,6 +247,7 @@ hunk-converter-0.2.0-windows-x86_64/
 - El modo Linux genera una carpeta y un `.tar.gz`.
 - El modo Windows genera una carpeta y un `.zip` si `zip` está disponible.
 - La build de Linux depende de las bibliotecas gráficas del sistema (X11/OpenGL), como cualquier app nativa.
+- Compilar en x86/x86_64 requiere NASM por el decodificador AVIF `rav1d`.
 - La build Windows importa únicamente DLLs del sistema; no necesita DLLs de MinGW.
 - La build Windows no se ha ejecutado todavía en un Windows real (t-23).
 
@@ -253,7 +260,7 @@ Resumen del contexto de referencia:
 - La aplicación Rust es drásticamente más pequeña y usa menos RAM.
 - El arranque a ventana es más rápido.
 - La interfaz no consume CPU de render en reposo: repinta bajo demanda.
-- WebP, JPG, PNG e ICO son más rápidos en la versión Rust.
+- WebP, JPG, PNG e ICO son más rápidos en la versión Rust; AVIF y JPEG XL se añaden como códecs nuevos.
 - Las cifras absolutas de CPU en reposo de Godot están infladas por usar llvmpipe sin VSync; no representan vatios reales en una GPU.
 - Windows está pendiente de validación en hardware real.
 
@@ -262,7 +269,7 @@ Resumen del contexto de referencia:
 - No se interpreta la orientación EXIF ni se conservan metadatos (`t-10`).
 - No hay redimensionado ni recorte, ni procesamiento por lotes (`t-11`, `t-12`).
 - El modo 1:1, los botones/gestos de zoom y los atajos de encuadre siguen pendientes (`t-16`).
-- No hay AVIF, HEIC ni JPEG XL (`t-15`).
+- HEIC no está soportado; AVIF y JPEG XL sí están disponibles como salida (`t-15`).
 - No se conservan perfiles ICC.
 - La accesibilidad nativa completa y el uso con lector de pantalla están pendientes (`t-22`).
 - La build Windows se genera, pero no se ha ejecutado en Windows (`t-23`).
@@ -272,7 +279,7 @@ Resumen del contexto de referencia:
 
 ## 9. Pruebas y verificación
 
-- **9 pruebas Rust**: codificación, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
+- **10 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, compresión, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
 - CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.
@@ -303,4 +310,4 @@ Al preguntar por las tareas, se debe devolver toda la información de cada tarea
 - Código: MIT (ver `LICENSE`).
 - Tipografía Manrope: SIL Open Font License 1.1 (ver `assets/fonts/OFL.txt`).
 - Prototipo Godot histórico: `../Prototipo`.
-- Motores y bibliotecas: Godot (histórico), eframe/egui, image, webp, resvg.
+- Motores y bibliotecas: Godot (histórico), eframe/egui, image, webp, png, avif-decode, zune-jpegxl, jxl-oxide y resvg.

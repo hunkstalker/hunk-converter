@@ -138,7 +138,12 @@ pub fn sidebar_frame() -> Frame {
     Frame::new()
         .fill(SURFACE)
         .stroke(Stroke::new(1.0, BORDER))
-        .corner_radius(CornerRadius::same(18))
+        .corner_radius(CornerRadius {
+            nw: 18,
+            ne: 18,
+            sw: 0,
+            se: 0,
+        })
         .inner_margin(Margin::symmetric(20, 14))
 }
 

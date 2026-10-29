@@ -48,6 +48,7 @@ fn main() {
         let options = EncodeOptions {
             format,
             quality,
+            compression: 70,
             ico_sizes,
             background: [255, 255, 255, 255],
         };

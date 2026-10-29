@@ -14,15 +14,16 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 
 - **Arrastrar y soltar** en cualquier parte de la ventana, o selector nativo con `Ctrl+O`.
 - **Entrada:** PNG, JPG/JPEG, WebP, BMP, TGA y SVG.
-- **Salida:** WebP, JPG, PNG e ICO.
-- **Calidad ajustable** de 1 a 100 para WebP y JPG (82 % por defecto).
+- **Salida:** WebP, AVIF, JPG, PNG, JPEG XL e ICO.
+- **Calidad ajustable** de 1 a 100 para WebP, JPG y AVIF (82 % por defecto).
+- **Compresión ajustable** para PNG y JPEG XL sin alterar los píxeles.
 - **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
 - **Zoom y paneo:** rueda del ratón sobre la imagen y clic derecho para desplazarte.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
 - **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
-- **PNG sin pérdida** y transparencia conservada en WebP/PNG/ICO.
+- **PNG y JPEG XL sin pérdida**, con compresión ajustable y transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
 - **Guardado directo** en `export/`, junto al ejecutable, sin sobrescribir archivos.
 - **Reinicio completo** con `Ctrl+R`.
@@ -66,6 +67,7 @@ Requisitos:
 
 - **Rust 1.99.1** (fijado en `rust-toolchain.toml`).
 - Un compilador de C para `libwebp-sys`.
+- **NASM** en x86/x86_64 para el decodificador AVIF (`rav1d`).
 - En Linux, las bibliotecas gráficas habituales de X11/OpenGL.
 - En Windows, MSVC Build Tools o un toolchain GNU.
 
@@ -79,7 +81,7 @@ cargo run --release
 
 1. Arrastra una imagen a la ventana o pulsa **Seleccionar una imagen**.
 2. Elige **WebP**, **JPG**, **PNG** o **ICO**.
-3. Ajusta la calidad o los tamaños del icono.
+3. Ajusta la calidad, la compresión o los tamaños del icono.
 4. Arrastra el divisor para comparar. Usa la rueda para acercar y el clic derecho para moverte por la imagen.
 5. Activa el cuentagotas si necesitas extraer colores.
 6. Pulsa **Exportar** o `Ctrl+E`.
@@ -100,15 +102,17 @@ El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se
 
 | Formato | Entrada | Salida | Transparencia | Calidad |
 | --- | :---: | :---: | :---: | :---: |
-| PNG | ✓ | ✓ | Sí | Sin pérdida |
-| JPG / JPEG | ✓ | ✓ | No (fondo blanco) | 1–100 |
 | WebP | ✓ | ✓ | Sí | 1–100 |
+| AVIF | — | ✓ | Sí | 1–100 |
+| JPG / JPEG | ✓ | ✓ | No (fondo blanco) | 1–100 |
+| PNG | ✓ | ✓ | Sí | Compresión 0–100 |
+| JPEG XL | — | ✓ | Sí | Compresión 0–100 (sin pérdida) |
+| ICO | — | ✓ | Sí | Tamaños fijos |
 | BMP | ✓ | — | Según archivo | — |
 | TGA | ✓ | — | Según archivo | — |
 | SVG | ✓ | — | Rasterizado | — |
-| ICO | — | ✓ | Sí | Tamaños fijos |
 
-Los SVG se rasterizan con `resvg` al tamaño declarado. El límite de entrada es de 200 MB y 40 megapíxeles (máximo 16 384 px por lado).
+Los SVG se rasterizan con `resvg` al tamaño declarado. AVIF y JPEG XL se añaden como formatos de salida; JPEG XL se codifica sin pérdida y su control ajusta el esfuerzo de compresión. PNG también es sin pérdida: su control no cambia la calidad, solo el tiempo y el tamaño del archivo. El límite de entrada es de 200 MB y 40 megapíxeles (máximo 16 384 px por lado).
 
 ## Builds portables
 
@@ -145,7 +149,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-La suite cubre codificación WebP/JPG/PNG, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
+La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, compresión, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
 
 ## Rendimiento
 
