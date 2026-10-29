@@ -1025,9 +1025,9 @@ impl HunkApp {
                     ui.add_space(SWATCH_GAP);
                 }
             }
-            ui.add_space(4.0);
+            ui.add_space(10.0);
             hline(ui);
-            ui.add_space(4.0);
+            ui.add_space(10.0);
 
             ui.spacing_mut().interact_size.y = 20.0;
             ui.horizontal(|ui| {

@@ -1,5 +1,6 @@
 /target/
 /dist/
+/temp/
 *.zip
 .DS_Store
 Thumbs.db

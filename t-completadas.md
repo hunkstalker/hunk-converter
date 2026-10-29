@@ -134,4 +134,4 @@
 **Descripción:** Quitar el botón propio de maximizar/restaurar y dejar los controles nativos de la ventana, reservar el espacio de coordenadas y códigos en la tarjeta del cuentagotas para que no cambie de altura al muestrear, y añadir un enlace al repositorio en el pie que abra el navegador.
 
 **Completada:** 2026-10-29
-**Resultado:** La cabecera conserva solo el selector de idioma y el reinicio. La tarjeta reserva siempre la línea de coordenadas y los códigos mantienen una fila fija, por lo que muestrear o elegir un color no desplaza el panel. El pie enlaza `github.com/hunkstalker/hunk-converter` y lo abre en el navegador. Verificado con capturas comparadas y un navegador simulado.
+**Resultado:** La cabecera conserva solo el selector de idioma y el reinicio. La tarjeta reserva siempre la línea de coordenadas y los códigos mantienen una fila fija, por lo que muestrear o elegir un color no desplaza el panel. El separador entre el historial y el cuentagotas tiene 10 px de margen por cada lado. El pie enlaza `github.com/hunkstalker/hunk-converter` y lo abre en el navegador. Verificado con capturas comparadas y un navegador simulado.

@@ -11,16 +11,17 @@ Fecha: 2026-10-29
   sobrescribir la preferencia guardada durante el arranque.
 - La tarjeta del cuentagotas reserva siempre la línea de coordenadas, aunque no
   haya una muestra. El mensaje se limita a una línea y el bloque de códigos
-  mantiene filas de altura fija.
+  mantiene filas de altura fija. El separador entre el historial y el
+  cuentagotas pasa de 4 px a 10 px por cada lado.
 - El pie muestra `github.com/hunkstalker/hunk-converter` a la derecha de la
   versión. El enlace usa `OpenUrl` de egui y abre el navegador del sistema.
 
 ## Verificación
 
 - Capturas comparadas a 1280 × 1000: el borde superior de la tarjeta queda en
-  `y=513` tanto sin muestra como con un color seleccionado; el inferior en
+  `y=501` tanto sin muestra como con un color seleccionado; el inferior en
   `y=855` en ambos casos.
-- A 1280 × 800 la tarjeta también conserva sus bordes en `y=399` y `y=655`
+- A 1280 × 800 la tarjeta también conserva sus bordes en `y=387` y `y=655`
   con y sin muestra.
 - El enlace se probó con un navegador simulado vía `BROWSER`; recibió
   `https://github.com/hunkstalker/hunk-converter` al hacer clic.
