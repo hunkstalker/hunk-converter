@@ -127,4 +127,11 @@
 **Descripción:** Abrir la aplicación con la ventana maximizada por defecto, permitir maximizar o restaurar con un botón y guardar el estado en `config.ini`.
 
 **Completada:** 2026-10-29
-**Resultado:** La app arranca con la ventana maximizada salvo que `config.ini` indique lo contrario. El icono de la cabecera maximiza o restaura y guarda el estado. En desarrollo, `HUNK_WINDOWED=1` fuerza una ventana normal.
+**Resultado:** La app arranca con la ventana maximizada salvo que `config.ini` indique lo contrario. Los controles nativos de la ventana actualizan el estado guardado. En desarrollo, `HUNK_WINDOWED=1` fuerza una ventana normal.
+
+## t-30 — Pulido de cabecera, tarjeta de color y pie
+
+**Descripción:** Quitar el botón propio de maximizar/restaurar y dejar los controles nativos de la ventana, reservar el espacio de coordenadas y códigos en la tarjeta del cuentagotas para que no cambie de altura al muestrear, y añadir un enlace al repositorio en el pie que abra el navegador.
+
+**Completada:** 2026-10-29
+**Resultado:** La cabecera conserva solo el selector de idioma y el reinicio. La tarjeta reserva siempre la línea de coordenadas y los códigos mantienen una fila fija, por lo que muestrear o elegir un color no desplaza el panel. El pie enlaza `github.com/hunkstalker/hunk-converter` y lo abre en el navegador. Verificado con capturas comparadas y un navegador simulado.

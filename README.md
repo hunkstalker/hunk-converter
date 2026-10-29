@@ -20,11 +20,11 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
 - **Zoom y paneo:** rueda del ratón sobre la imagen y clic derecho para desplazarte.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
-- **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
+- **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color. La tarjeta mantiene una altura fija al mostrar coordenadas y códigos.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con botones de copia y confirmación visual.
 - **Historial de colores:** 21 colores en tres filas de siete, con bloqueo y limpieza.
 - **Idiomas:** español, catalán e inglés, con detección del sistema y preferencia guardada.
-- **Ventana maximizada:** se abre maximizada; el icono de la cabecera maximiza o restaura y el estado se guarda.
+- **Ventana maximizada:** se abre maximizada; los controles nativos permiten maximizar o restaurar y el estado se guarda.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
 - **PNG y JPEG XL sin pérdida**, con transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
@@ -33,6 +33,7 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Portable:** builds de Linux y Windows, sin instalador.
 - **Local y privado:** cero llamadas de red.
 - **Render bajo demanda:** sin CPU de UI en reposo.
+- **Enlace al repositorio:** el pie abre `github.com/hunkstalker/hunk-converter` en el navegador.
 
 ## Cuentagotas
 
@@ -61,7 +62,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 
 - Selector **ES / CA / EN** en la cabecera.
 - En el primer arranque se detecta el idioma del sistema.
-- El idioma elegido, el historial, los bloqueos y el estado maximizado se guardan en `config.ini`, junto al ejecutable.
+- El idioma elegido, el historial, los bloqueos y el estado maximizado se guardan en `config.ini`, junto al ejecutable. La ventana usa los controles nativos del sistema.
 - Si no se puede escribir el archivo, la aplicación sigue funcionando sin persistencia.
 
 ## Zoom y navegación

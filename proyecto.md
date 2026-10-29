@@ -134,14 +134,14 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 
 ### Ventana y distribución
 
-- La aplicación se abre con la ventana maximizada. El icono de la cabecera maximiza o restaura; el estado se guarda en `config.ini`.
+- La aplicación se abre con la ventana maximizada. Los controles nativos permiten maximizar o restaurar; el estado se guarda en `config.ini`.
 - Tamaño de ventana por defecto 1280 × 800; mínimo 1024 × 800.
-- Cabecera con marca, selector de idioma y botón de reinicio.
-- La barra lateral tiene scroll vertical cuando el historial y el cuentagotas no caben; el botón de exportar queda fijo abajo.
+- Cabecera con marca, selector de idioma y botón de reinicio. Los controles de ventana son los nativos.
+- La barra lateral tiene scroll vertical cuando los ajustes no caben; la tarjeta del cuentagotas y el botón de exportar quedan fijos abajo con altura estable.
 - Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, historial de colores, cuentagotas y exportación.
 - La tarjeta lateral conserva los radios superiores y las esquinas inferiores cuadradas, con margen derecho y separación respecto a la cabecera.
 - Zona principal con cabecera de vista previa, lienzo y pie de pesos.
-- Pie global con estado del proyecto y versión.
+- Pie global con estado del proyecto, versión y enlace al repositorio.
 - El cuentagotas permanece visible y se sitúa por encima del botón de exportar.
 
 ### Render bajo demanda

@@ -53,8 +53,8 @@
   y el botón de exportar abajo.
 - Los toasts se miden con el texto real, con ancho máximo y ajuste de varias
   líneas.
-- La aplicación arranca con la ventana maximizada. El icono de la cabecera
-  maximiza o restaura, y el estado se guarda en `config.ini`.
+- La aplicación arranca con la ventana maximizada. Los controles nativos
+  maximizan o restauran, y el estado se guarda en `config.ini`.
 
 ## Verificación
 
@@ -71,10 +71,10 @@
 
 ## Medidas finales
 
-- Ejecutable Linux: 16.570.664 B (15,8 MiB).
-- Ejecutable Windows: 15.121.408 B (14,4 MiB).
-- Arranque a ventana: 193,0 ms de mediana (20 arranques).
-- RSS en reposo: 102,1 MiB.
+- Ejecutable Linux: 16.847.272 B (16,1 MiB).
+- Ejecutable Windows: 15.398.912 B (14,7 MiB).
+- Arranque a ventana: 200,2 ms de mediana (20 arranques).
+- RSS en reposo: 102,0 MiB.
 - RSS con imagen 12 MP: 212,6 MiB.
 - El paquete Linux creó `config.ini` junto al ejecutable en el primer
   arranque y detectó el idioma catalán.

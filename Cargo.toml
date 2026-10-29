@@ -12,6 +12,7 @@ eframe = { version = "0.37.0", default-features = false, features = [
     "clipboard",
     "default_fonts",
     "glow",
+    "links",
     "x11",
 ] }
 egui = "0.37.0"

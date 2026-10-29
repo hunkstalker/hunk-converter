@@ -32,6 +32,7 @@ pub struct HunkApp {
     language: Lang,
     history: Vec<HistoryEntry>,
     maximized: bool,
+    native_maximized_seen: bool,
     sample_pending_history: bool,
     color_panel_height: f32,
     format: OutputFormat,
@@ -113,6 +114,7 @@ impl HunkApp {
             language: settings.language,
             history: settings.history,
             maximized: settings.maximized,
+            native_maximized_seen: false,
             sample_pending_history: false,
             color_panel_height: 300.0,
             format: OutputFormat::Webp,
@@ -168,11 +170,18 @@ impl HunkApp {
         .save();
     }
 
-    fn set_maximized(&mut self, ctx: &egui::Context, maximized: bool) {
-        self.maximized = maximized;
-        ctx.send_viewport_cmd(ViewportCommand::Maximized(maximized));
-        self.save_settings();
-        ctx.request_repaint();
+    fn sync_native_maximized(&mut self, ctx: &egui::Context) {
+        let Some(maximized) = ctx.input(|input| input.viewport().maximized) else {
+            return;
+        };
+        if !self.native_maximized_seen {
+            self.maximized = maximized;
+            self.native_maximized_seen = true;
+        } else if maximized != self.maximized {
+            self.maximized = maximized;
+            self.save_settings();
+            ctx.request_repaint();
+        }
     }
 
     fn remember_color(&mut self, rgba: [u8; 4]) -> bool {
@@ -690,16 +699,6 @@ impl HunkApp {
                             self.save_settings();
                             ctx.request_repaint();
                         }
-
-                        let response = maximize_button(ui, self.maximized);
-                        let hint = if self.maximized {
-                            self.t(K::RestoreWindow)
-                        } else {
-                            self.t(K::MaximizeWindow)
-                        };
-                        if response.on_hover_text(hint).clicked() {
-                            self.set_maximized(&ctx, !self.maximized);
-                        }
                     });
                 });
             });
@@ -723,7 +722,13 @@ impl HunkApp {
                         .color(T::TEXT_FAINT),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("MIT").size(9.5).color(T::TEXT_FAINT));
+                        ui.hyperlink_to(
+                            RichText::new("github.com/hunkstalker/hunk-converter")
+                                .size(9.5)
+                                .color(T::TEXT_MUTED),
+                            "https://github.com/hunkstalker/hunk-converter",
+                        )
+                        .on_hover_text(self.t(K::OpenRepository));
                     });
                 });
             });
@@ -1075,6 +1080,7 @@ impl HunkApp {
                 );
                 ui.add_space(2.0);
                 ui.vertical(|ui| {
+                    ui.spacing_mut().item_spacing.y = 1.0;
                     let message = if icon_mode {
                         self.t(K::EyedropperIcoHint)
                     } else if self.eyedropper_active {
@@ -1090,14 +1096,18 @@ impl HunkApp {
                     } else {
                         self.t(K::EyedropperIdle)
                     };
-                    ui.label(RichText::new(message).size(9.5).color(T::TEXT_MUTED));
-                    if let Some((x, y)) = sampled_position {
-                        ui.label(
-                            RichText::new(i18n::pixel_coords(self.language, x, y))
-                                .font(FontId::monospace(8.5))
-                                .color(T::TEXT_FAINT),
-                        );
-                    }
+                    ui.add(
+                        egui::Label::new(RichText::new(message).size(9.5).color(T::TEXT_MUTED))
+                            .truncate(),
+                    );
+                    let coords = sampled_position
+                        .map(|(x, y)| i18n::pixel_coords(self.language, x, y))
+                        .unwrap_or_else(|| "\u{00A0}".to_owned());
+                    ui.label(
+                        RichText::new(coords)
+                            .font(FontId::monospace(8.5))
+                            .color(T::TEXT_FAINT),
+                    );
                 });
             });
             ui.add_space(2.0);
@@ -1773,6 +1783,8 @@ impl HunkApp {
 impl eframe::App for HunkApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        self.sync_native_maximized(&ctx);
+
         let dropped = ctx.input(|input| {
             input
                 .raw
@@ -2165,43 +2177,6 @@ fn format_card(
         if selected { T::ACCENT } else { T::TEXT_FAINT },
     );
     response.on_hover_cursor(CursorIcon::PointingHand)
-}
-
-fn maximize_button(ui: &mut egui::Ui, maximized: bool) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(vec2(28.0, 26.0), Sense::click());
-    let hovered = response.hovered();
-    if hovered {
-        ui.painter()
-            .rect_filled(rect, CornerRadius::same(8), T::SURFACE_3);
-    }
-    let color = if hovered { T::TEXT } else { T::TEXT_MUTED };
-    let inner = rect.shrink(7.0);
-    let length = if maximized { 3.5 } else { 5.0 };
-    for (corner, dx, dy) in [
-        (inner.left_top(), 1.0, 1.0),
-        (inner.right_top(), -1.0, 1.0),
-        (inner.left_bottom(), 1.0, -1.0),
-        (inner.right_bottom(), -1.0, -1.0),
-    ] {
-        let corner = if maximized {
-            corner + vec2(dx * 3.0, dy * 3.0)
-        } else {
-            corner
-        };
-        ui.painter().line_segment(
-            [corner, corner + vec2(dx * length, 0.0)],
-            Stroke::new(1.4, color),
-        );
-        ui.painter().line_segment(
-            [corner, corner + vec2(0.0, dy * length)],
-            Stroke::new(1.4, color),
-        );
-    }
-    if hovered {
-        response.on_hover_cursor(CursorIcon::PointingHand)
-    } else {
-        response
-    }
 }
 
 fn small_text_button(ui: &mut egui::Ui, label: &str) -> egui::Response {

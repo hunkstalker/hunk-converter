@@ -76,8 +76,11 @@ macro_rules! catalogue {
 catalogue! {
     Reset => ("Reiniciar", "Reinicia", "Reset"),
     Language => ("Idioma", "Idioma", "Language"),
-    MaximizeWindow => ("Maximizar ventana", "Maximitza la finestra", "Maximize window"),
-    RestoreWindow => ("Restaurar ventana", "Restaura la finestra", "Restore window"),
+    OpenRepository => (
+        "Abrir el repositorio en el navegador",
+        "Obre el repositori al navegador",
+        "Open the repository in your browser"
+    ),
     EmptyTitle => ("Suelta una imagen.\nHazla tuya.", "Deixa anar una imatge.\nFes-la teva.", "Drop an image.\nMake it yours."),
     EmptySubtitle => (
         "Convierte, comprime y exporta sin salir de tu equipo.",

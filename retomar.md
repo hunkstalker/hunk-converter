@@ -26,11 +26,12 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Calidad 1–100 para WebP/JPG/AVIF; PNG y JPEG XL sin pérdida; JPG aplanado sobre blanco.
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
-- Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación.
+- Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación. La tarjeta reserva el espacio de coordenadas y códigos para no cambiar de altura.
 - Historial de 21 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
 - Idioma, historial, bloqueos y estado maximizado se guardan en `config.ini`, junto al ejecutable.
-- La aplicación se abre con la ventana maximizada; el icono de la cabecera maximiza o restaura.
+- La aplicación se abre con la ventana maximizada; los controles nativos permiten maximizar o restaurar.
 - Icono propio de máscara de gas y marca **Hunk Converter / IMAGE TOOLBOX**.
+- Pie con enlace directo a `github.com/hunkstalker/hunk-converter`, abierto en el navegador.
 - Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
 - Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
 - Reinicio, atajos y avisos de error.
@@ -120,7 +121,7 @@ t-completadas.md            Tareas cerradas
 ## 6. Tareas
 
 - Pendientes: `todo.md` (t-10 a t-13, t-15 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27, t-28 y t-29).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27, t-28, t-29 y t-30).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 
