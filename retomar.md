@@ -24,7 +24,8 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Entrada: PNG, JPG, WebP, BMP, TGA y SVG.
 - Salida: WebP, JPG, PNG e ICO.
 - Calidad 1–100 para WebP/JPG; PNG sin pérdida; JPG aplanado sobre blanco.
-- Comparador visual con divisor, damero y modo ICO.
+- Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
+- Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas y códigos HEX/RGB/RGBA/HSL; copia al portapapeles.
 - Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
 - Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
@@ -70,7 +71,8 @@ Builds portables:
 - **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
 - **Vista previa fiel:** decodificar el buffer final, no estimar.
 - **Cuentagotas:** icono de pipeta; un clic activa o desactiva el modo y también se puede arrastrar desde el icono hasta la imagen; muestrea el píxel original; no mueve el divisor; la marca solo se ve mientras está activo; se cancela con `Esc`; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
-- **Comparador:** el cursor de redimensionado solo aparece sobre la línea o el círculo del divisor.
+- **Comparador:** el cursor de redimensionado solo aparece sobre la línea o el círculo del divisor. La rueda hace zoom (100–800 %) y el clic derecho desplaza la imagen cuando está ampliada.
+- **Vista:** el zoom se reinicia al cargar otra imagen o reiniciar; el encuadre se conserva al cambiar de formato.
 - **JPG:** transparencia compuesta sobre blanco.
 - **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
 - **Calidad inicial:** 82 %.
@@ -103,7 +105,7 @@ t-completadas.md            Tareas cerradas
 ## 6. Tareas
 
 - Pendientes: `todo.md` (t-10 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20 y t-21).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20, t-21 y t-25).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 
@@ -121,7 +123,8 @@ El informe completo está en `docs/benchmark-2026-10-28.md`.
 Pendientes conocidos:
 
 - EXIF y metadatos (`t-10`).
-- Redimensión, lotes y zoom (`t-11`, `t-12`, `t-16`).
+- Redimensión y lotes (`t-11`, `t-12`).
+- Modo 1:1, botones/gestos de zoom y atajos de encuadre (`t-16`).
 - AVIF/HEIC/JPEG XL (`t-15`).
 - Accesibilidad completa (`t-22`).
 - Validación Windows (`t-23`) e icono del ejecutable (`t-24`).

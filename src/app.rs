@@ -18,6 +18,8 @@ use crate::theme as T;
 
 const ENCODE_DELAY_MS: u64 = 160;
 const UI_PREVIEW_MAX: u32 = 2048;
+const MIN_ZOOM: f32 = 1.0;
+const MAX_ZOOM: f32 = 8.0;
 
 pub struct HunkApp {
     source: Option<Source>,
@@ -30,6 +32,8 @@ pub struct HunkApp {
     sampled_color: Option<[u8; 4]>,
     sampled_position: Option<(u32, u32)>,
     split: f32,
+    zoom: f32,
+    pan: Vec2,
     revision: u64,
     pending_since: Option<Instant>,
     worker: Option<Receiver<JobMessage>>,
@@ -104,6 +108,8 @@ impl HunkApp {
             sampled_color: None,
             sampled_position: None,
             split: 0.5,
+            zoom: MIN_ZOOM,
+            pan: Vec2::ZERO,
             revision: 0,
             pending_since: None,
             worker: None,
@@ -151,6 +157,46 @@ impl HunkApp {
                 .result
                 .as_ref()
                 .is_some_and(|result| result.format == self.format)
+    }
+
+    fn view_rect(&self, fit_rect: Rect, area: Rect) -> Rect {
+        Rect::from_center_size(area.center() + self.pan, fit_rect.size() * self.zoom)
+    }
+
+    fn clamp_pan(&mut self, fit_rect: Rect, area: Rect) {
+        if self.zoom <= MIN_ZOOM + f32::EPSILON {
+            self.zoom = MIN_ZOOM;
+            self.pan = Vec2::ZERO;
+            return;
+        }
+        let size = fit_rect.size() * self.zoom;
+        let max_x = ((size.x - area.width()) * 0.5).max(0.0);
+        let max_y = ((size.y - area.height()) * 0.5).max(0.0);
+        self.pan.x = self.pan.x.clamp(-max_x, max_x);
+        self.pan.y = self.pan.y.clamp(-max_y, max_y);
+    }
+
+    fn zoom_at(&mut self, scroll_y: f32, pointer: egui::Pos2, fit_rect: Rect, area: Rect) {
+        let factor = (scroll_y * 0.0025).exp();
+        let new_zoom = (self.zoom * factor).clamp(MIN_ZOOM, MAX_ZOOM);
+        if (new_zoom - self.zoom).abs() < f32::EPSILON {
+            return;
+        }
+
+        let old_rect = self.view_rect(fit_rect, area);
+        if old_rect.width() <= 0.0 || old_rect.height() <= 0.0 {
+            return;
+        }
+        let normalized = vec2(
+            ((pointer.x - old_rect.left()) / old_rect.width()).clamp(0.0, 1.0),
+            ((pointer.y - old_rect.top()) / old_rect.height()).clamp(0.0, 1.0),
+        );
+        let new_size = fit_rect.size() * new_zoom;
+        let new_center = pointer - normalized * new_size + new_size * 0.5;
+
+        self.zoom = new_zoom;
+        self.pan = new_center - area.center();
+        self.clamp_pan(fit_rect, area);
     }
 
     fn request_encode(&mut self, ctx: &egui::Context, delay: Option<Duration>) {
@@ -300,6 +346,8 @@ impl HunkApp {
         self.sampled_color = None;
         self.sampled_position = None;
         self.split = 0.5;
+        self.zoom = MIN_ZOOM;
+        self.pan = Vec2::ZERO;
         self.screenshot_at = None;
         self.screenshot_requested = false;
         self.request_encode(ctx, None);
@@ -369,6 +417,8 @@ impl HunkApp {
         self.quality = 82;
         self.ico_selected = [true; 6];
         self.split = 0.5;
+        self.zoom = MIN_ZOOM;
+        self.pan = Vec2::ZERO;
         self.eyedropper_active = false;
         self.sampled_color = None;
         self.sampled_position = None;
@@ -541,16 +591,18 @@ impl HunkApp {
             .show_separator_line(false)
             .frame(Frame::new().fill(T::BG).inner_margin(Margin {
                 left: 30,
-                right: 0,
+                right: 20,
                 top: 8,
                 bottom: 14,
             }))
             .show(root, |ui| {
                 T::sidebar_frame().show(ui, |ui| {
-                    ui.set_min_height(ui.available_height());
+                    // Deja aire abajo para que se vean las esquinas redondeadas.
+                    ui.set_min_height((ui.available_height() - 18.0).max(160.0));
                     ui.set_width(ui.available_width());
 
-                    let top_height = (ui.available_height() - 230.0).max(160.0);
+                    // Reserva espacio para el cuentagotas, la exportación y el margen inferior.
+                    let top_height = (ui.available_height() - 248.0).max(160.0);
                     egui::ScrollArea::vertical()
                         .id_salt("sidebar_scroll")
                         .auto_shrink([false, false])
@@ -929,6 +981,25 @@ impl HunkApp {
                             .size(9.5)
                             .color(T::TEXT_MUTED),
                     );
+                    if self.format != OutputFormat::Ico {
+                        ui.add_space(2.0);
+                        let zoom_percent = (self.zoom * 100.0).round() as u32;
+                        if self.zoom > MIN_ZOOM + 0.001 {
+                            let reset = egui::Button::new(
+                                RichText::new(format!("Zoom {zoom_percent} %"))
+                                    .size(9.5)
+                                    .color(T::ACCENT),
+                            )
+                            .frame(false);
+                            if ui.add(reset).on_hover_text("Restablecer zoom").clicked() {
+                                self.zoom = MIN_ZOOM;
+                                self.pan = Vec2::ZERO;
+                                ctx.request_repaint();
+                            }
+                        } else {
+                            ui.label(RichText::new("Zoom 100 %").size(9.5).color(T::TEXT_FAINT));
+                        }
+                    }
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if self.busy() {
                             ui.add(egui::Spinner::new().size(12.0).color(T::ACCENT));
@@ -947,9 +1018,15 @@ impl HunkApp {
                                     .size(9.5)
                                     .color(T::TEXT_FAINT),
                             );
+                        } else if self.zoom > MIN_ZOOM + 0.001 {
+                            ui.label(
+                                RichText::new("Rueda: zoom · clic derecho: mover")
+                                    .size(9.5)
+                                    .color(T::TEXT_FAINT),
+                            );
                         } else {
                             ui.label(
-                                RichText::new("Arrastra el divisor para comparar")
+                                RichText::new("Arrastra el divisor · rueda para zoom")
                                     .size(9.5)
                                     .color(T::TEXT_FAINT),
                             );
@@ -1027,9 +1104,34 @@ impl HunkApp {
             return;
         }
 
-        let image_rect = fit_rect(source_size, area);
-        paint_checker(painter, image_rect);
-        painter.image(
+        let fit_rect = fit_rect(source_size, area);
+        self.clamp_pan(fit_rect, area);
+        let mut image_rect = self.view_rect(fit_rect, area);
+
+        let pointer = ctx.input(|input| input.pointer.hover_pos());
+        if response.hovered()
+            && let Some(position) = pointer
+            && image_rect.contains(position)
+        {
+            let scroll = ctx.input(|input| input.smooth_scroll_delta.y);
+            if scroll.abs() > f32::EPSILON {
+                self.zoom_at(scroll, position, fit_rect, area);
+                image_rect = self.view_rect(fit_rect, area);
+            }
+        }
+        if response.dragged_by(egui::PointerButton::Secondary) && self.zoom > MIN_ZOOM {
+            let delta = ctx.input(|input| input.pointer.delta());
+            self.pan += delta;
+            self.clamp_pan(fit_rect, area);
+            image_rect = self.view_rect(fit_rect, area);
+        }
+
+        let view_rect = image_rect.intersect(area);
+        let mut canvas = painter.clone();
+        canvas.set_clip_rect(area);
+
+        paint_checker(&canvas, image_rect);
+        canvas.image(
             source_texture,
             image_rect,
             Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
@@ -1041,14 +1143,18 @@ impl HunkApp {
             .as_ref()
             .filter(|result| result.format == self.format)
             .map(|result| result.texture.id());
+        let split_x = image_rect.left() + image_rect.width() * self.split;
+        let over_handle = result_texture.is_some()
+            && pointer.is_some_and(|position| pointer_over_split(view_rect, split_x, position));
 
         if self.eyedropper_active {
             if response.hovered() {
                 ctx.set_cursor_icon(CursorIcon::Crosshair);
             }
             if (ctx.input(|input| input.pointer.primary_down()) || response.clicked())
-                && let Some(position) = ctx.input(|input| input.pointer.interact_pos())
+                && let Some(position) = pointer
                 && image_rect.contains(position)
+                && area.contains(position)
             {
                 let nx = ((position.x - image_rect.left()) / image_rect.width()).clamp(0.0, 1.0);
                 let ny = ((position.y - image_rect.top()) / image_rect.height()).clamp(0.0, 1.0);
@@ -1058,28 +1164,34 @@ impl HunkApp {
                 self.sampled_color = Some(pixel.0);
                 self.sampled_position = Some((x, y));
             }
-        } else if result_texture.is_some() {
-            if (response.dragged() || response.clicked())
+        } else {
+            if result_texture.is_some()
+                && (response.dragged_by(egui::PointerButton::Primary) || response.clicked())
                 && let Some(position) = ctx.input(|input| input.pointer.interact_pos())
             {
                 self.split =
                     ((position.x - image_rect.left()) / image_rect.width()).clamp(0.015, 0.985);
             }
-            let split_x = image_rect.left() + image_rect.width() * self.split;
-            let over_handle = ctx
-                .input(|input| input.pointer.hover_pos())
-                .is_some_and(|position| pointer_over_split(image_rect, split_x, position));
             if response.hovered() && over_handle {
                 ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
+            } else if self.zoom > MIN_ZOOM
+                && (response.hovered() || response.dragged_by(egui::PointerButton::Secondary))
+            {
+                ctx.set_cursor_icon(if response.dragged_by(egui::PointerButton::Secondary) {
+                    CursorIcon::Grabbing
+                } else {
+                    CursorIcon::Grab
+                });
             }
         }
 
         if let Some(texture_id) = result_texture {
             let split_x = image_rect.left() + image_rect.width() * self.split;
-            let mut clipped = painter.clone();
+            let split_clip_x = split_x.clamp(view_rect.left(), view_rect.right());
+            let mut clipped = canvas.clone();
             clipped.set_clip_rect(Rect::from_min_max(
-                image_rect.min,
-                pos2(split_x, image_rect.max.y),
+                view_rect.min,
+                pos2(split_clip_x, view_rect.max.y),
             ));
             clipped.image(
                 texture_id,
@@ -1088,43 +1200,48 @@ impl HunkApp {
                 Color32::WHITE,
             );
 
-            let line_color = Color32::from_rgba_unmultiplied(255, 255, 255, 210);
-            painter.line_segment(
-                [
-                    pos2(split_x, image_rect.top() + 8.0),
-                    pos2(split_x, image_rect.bottom() - 8.0),
-                ],
-                Stroke::new(3.0, Color32::from_black_alpha(80)),
-            );
-            painter.line_segment(
-                [
-                    pos2(split_x, image_rect.top() + 8.0),
-                    pos2(split_x, image_rect.bottom() - 8.0),
-                ],
-                Stroke::new(1.2, line_color),
-            );
-            let center = pos2(split_x, image_rect.center().y);
-            painter.circle_filled(center, 18.0, Color32::from_black_alpha(100));
-            painter.circle_filled(center, 16.0, T::BG_SOFT);
-            painter.circle_stroke(
-                center,
-                16.0,
-                Stroke::new(1.2, Color32::from_white_alpha(150)),
-            );
-            for direction in [-1.0_f32, 1.0] {
-                let tip = center + vec2(direction * 9.5, 0.0);
-                painter.line_segment(
-                    [center + vec2(direction * 4.0, -4.5), tip],
-                    Stroke::new(1.4, T::TEXT),
+            if split_x >= view_rect.left()
+                && split_x <= view_rect.right()
+                && view_rect.height() > 24.0
+            {
+                let line_color = Color32::from_rgba_unmultiplied(255, 255, 255, 210);
+                canvas.line_segment(
+                    [
+                        pos2(split_x, view_rect.top() + 8.0),
+                        pos2(split_x, view_rect.bottom() - 8.0),
+                    ],
+                    Stroke::new(3.0, Color32::from_black_alpha(80)),
                 );
-                painter.line_segment(
-                    [tip, center + vec2(direction * 4.0, 4.5)],
-                    Stroke::new(1.4, T::TEXT),
+                canvas.line_segment(
+                    [
+                        pos2(split_x, view_rect.top() + 8.0),
+                        pos2(split_x, view_rect.bottom() - 8.0),
+                    ],
+                    Stroke::new(1.2, line_color),
                 );
+                let center = pos2(split_x, view_rect.center().y);
+                canvas.circle_filled(center, 18.0, Color32::from_black_alpha(100));
+                canvas.circle_filled(center, 16.0, T::BG_SOFT);
+                canvas.circle_stroke(
+                    center,
+                    16.0,
+                    Stroke::new(1.2, Color32::from_white_alpha(150)),
+                );
+                for direction in [-1.0_f32, 1.0] {
+                    let tip = center + vec2(direction * 9.5, 0.0);
+                    canvas.line_segment(
+                        [center + vec2(direction * 4.0, -4.5), tip],
+                        Stroke::new(1.4, T::TEXT),
+                    );
+                    canvas.line_segment(
+                        [tip, center + vec2(direction * 4.0, 4.5)],
+                        Stroke::new(1.4, T::TEXT),
+                    );
+                }
             }
         } else if self.busy() {
-            painter.text(
-                image_rect.center(),
+            canvas.text(
+                view_rect.center(),
                 Align2::CENTER_CENTER,
                 "Preparando resultado…",
                 FontId::proportional(13.0),
@@ -1140,13 +1257,13 @@ impl HunkApp {
             let ratio_y = sample_y as f32 / source_height.saturating_sub(1).max(1) as f32;
             let marker =
                 image_rect.min + vec2(ratio_x * image_rect.width(), ratio_y * image_rect.height());
-            painter.circle_stroke(
+            canvas.circle_stroke(
                 marker,
                 8.0,
                 Stroke::new(3.0, Color32::from_black_alpha(180)),
             );
-            painter.circle_stroke(marker, 8.0, Stroke::new(1.2, Color32::WHITE));
-            painter.circle_filled(
+            canvas.circle_stroke(marker, 8.0, Stroke::new(1.2, Color32::WHITE));
+            canvas.circle_filled(
                 marker,
                 3.0,
                 Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]),
@@ -1154,16 +1271,16 @@ impl HunkApp {
         }
 
         paint_badge(
-            painter,
-            image_rect.left_top() + vec2(10.0, 10.0),
+            &canvas,
+            view_rect.left_top() + vec2(10.0, 10.0),
             Align2::LEFT_TOP,
             "ORIGINAL",
             Color32::from_rgba_unmultiplied(10, 13, 16, 225),
             T::TEXT,
         );
         paint_badge(
-            painter,
-            image_rect.right_top() + vec2(-10.0, 10.0),
+            &canvas,
+            view_rect.right_top() + vec2(-10.0, 10.0),
             Align2::RIGHT_TOP,
             self.format.badge(),
             T::ACCENT,

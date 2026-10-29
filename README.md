@@ -17,6 +17,7 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Salida:** WebP, JPG, PNG e ICO.
 - **Calidad ajustable** de 1 a 100 para WebP y JPG (82 % por defecto).
 - **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
+- **Zoom y paneo:** rueda del ratón sobre la imagen y clic derecho para desplazarte.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
 - **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
@@ -41,6 +42,15 @@ El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo c
 La muestra se toma del píxel original, no del resultado recompimido, y conserva el canal alfa. En la vista ICO el cuentagotas se desactiva porque esa vista representa el icono generado, no la imagen de origen.
 
 ![Cuentagotas de hunk-converter](docs/hunk-converter-cuentagotas.png)
+
+## Zoom y navegación
+
+- **Rueda del ratón** sobre la imagen: acerca y aleja manteniendo el punto bajo el cursor.
+- **Clic derecho y arrastra**: desplaza la imagen cuando está ampliada.
+- El porcentaje de zoom aparece en la cabecera de la vista previa; pulsa sobre él para volver al ajuste inicial.
+- El divisor y el cuentagotas siguen funcionando con cualquier zoom.
+
+![Zoom y paneo de hunk-converter](docs/hunk-converter-zoom.png)
 
 ## Capturas
 
@@ -70,7 +80,7 @@ cargo run --release
 1. Arrastra una imagen a la ventana o pulsa **Seleccionar una imagen**.
 2. Elige **WebP**, **JPG**, **PNG** o **ICO**.
 3. Ajusta la calidad o los tamaños del icono.
-4. Arrastra el divisor del comparador para revisar el resultado.
+4. Arrastra el divisor para comparar. Usa la rueda para acercar y el clic derecho para moverte por la imagen.
 5. Activa el cuentagotas si necesitas extraer colores.
 6. Pulsa **Exportar** o `Ctrl+E`.
 

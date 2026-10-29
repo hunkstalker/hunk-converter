@@ -64,6 +64,10 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Damero para transparencia.
 - Modo ICO: se oculta el divisor y se muestra el icono generado, con recuento de tamaños.
 - El lienzo se adapta al tamaño de la ventana conservando la proporción.
+- **Zoom con la rueda** sobre la imagen, de 100 % a 800 %, anclado al punto bajo el cursor.
+- **Paneo con clic derecho** cuando la imagen está ampliada, con límites para no perderla de vista.
+- El porcentaje de zoom aparece en la cabecera; al pulsarlo se vuelve al ajuste inicial.
+- El divisor, su círculo y el cuentagotas se adaptan al zoom y al desplazamiento.
 - La vista previa se limita a 2048 px de lado; la exportación conserva la resolución completa.
 
 ### 3.4 Cuentagotas
@@ -77,7 +81,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Códigos simultáneos: **HEX, RGB, RGBA y HSL**, cada uno con botón de copia.
 - El muestreo no mueve el divisor del comparador.
 - En modo ICO se desactiva, porque la vista no representa la imagen original.
-- La muestra se limpia al cargar otra imagen o reiniciar.
+- La muestra y el zoom se reinician al cargar otra imagen o reiniciar la sesión.
 
 ### 3.5 Exportación
 
@@ -119,6 +123,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Tamaño inicial 1280 × 800; mínimo 1024 × 800.
 - Cabecera con marca, estado local y reinicio.
 - Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, cuentagotas y exportación.
+- La tarjeta lateral conserva margen derecho e inferior para que sus cuatro esquinas redondeadas se vean completas.
 - Zona principal con cabecera de vista previa, lienzo y pie de pesos.
 - Pie global con estado del proyecto y versión.
 - El cuentagotas permanece visible y se sitúa por encima del botón de exportar.
@@ -255,7 +260,8 @@ Resumen del contexto de referencia:
 ## 8. Límites conocidos
 
 - No se interpreta la orientación EXIF ni se conservan metadatos (`t-10`).
-- No hay redimensionado, recorte, zoom ni procesamiento por lotes (`t-11`, `t-12`, `t-16`).
+- No hay redimensionado ni recorte, ni procesamiento por lotes (`t-11`, `t-12`).
+- El modo 1:1, los botones/gestos de zoom y los atajos de encuadre siguen pendientes (`t-16`).
 - No hay AVIF, HEIC ni JPEG XL (`t-15`).
 - No se conservan perfiles ICC.
 - La accesibilidad nativa completa y el uso con lector de pantalla están pendientes (`t-22`).

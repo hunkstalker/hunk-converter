@@ -28,9 +28,9 @@
 
 **Descripción:** Evaluar e integrar decodificación y/o codificación AVIF, HEIC y JPEG XL manteniendo la portabilidad. AVIF y JPEG XL deben poder seleccionarse como formato de salida cuando sus códecs estén disponibles; HEIC puede limitarse a entrada si la licencia o las dependencias lo aconsejan. La funcionalidad debe ser opcional, claramente marcada si requiere bibliotecas externas y no debe romper las builds actuales ni introducir llamadas de red.
 
-## t-16 — Zoom y navegación del lienzo
+## t-16 — Navegación avanzada del lienzo
 
-**Descripción:** Añadir zoom con rueda, gestos o botones, paneo y un modo de ajuste/1:1 en el comparador. El divisor y el cuentagotas deben seguir funcionando a cualquier nivel de zoom y el encuadre debe conservarse al cambiar de formato cuando sea posible.
+**Descripción:** Completar la navegación con un modo 1:1, zoom mediante botones o gestos además de la rueda y atajos de encuadre (ajustar, restablecer). El divisor, su círculo y el cuentagotas ya funcionan a cualquier zoom; el encuadre debe conservarse al cambiar de formato.
 
 ## t-17 — Build de macOS
 
