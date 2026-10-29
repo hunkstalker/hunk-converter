@@ -1,3 +1,4 @@
+use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -27,7 +28,6 @@ pub struct HunkApp {
     brand_icon: Option<TextureHandle>,
     format: OutputFormat,
     quality: u8,
-    compression: u8,
     ico_selected: [bool; 6],
     eyedropper_active: bool,
     sampled_color: Option<[u8; 4]>,
@@ -104,7 +104,6 @@ impl HunkApp {
             brand_icon,
             format: OutputFormat::Webp,
             quality: 82,
-            compression: 70,
             ico_selected: [true; 6],
             eyedropper_active: false,
             sampled_color: None,
@@ -241,7 +240,6 @@ impl HunkApp {
         let options = EncodeOptions {
             format: self.format,
             quality: self.quality,
-            compression: self.compression,
             ico_sizes: self.selected_ico_sizes(),
             background: [255, 255, 255, 255],
         };
@@ -403,6 +401,72 @@ impl HunkApp {
         );
     }
 
+    fn paste_clipboard_image(&mut self, ctx: &egui::Context) {
+        let mut clipboard = match arboard::Clipboard::new() {
+            Ok(clipboard) => clipboard,
+            Err(error) => {
+                self.toast = Some(Toast {
+                    message: format!("No se pudo abrir el portapapeles: {error}"),
+                    error: true,
+                    until: Instant::now() + Duration::from_secs(4),
+                });
+                ctx.request_repaint();
+                return;
+            }
+        };
+        let image = match clipboard.get_image() {
+            Ok(image) => image,
+            Err(arboard::Error::ContentNotAvailable) => return,
+            Err(error) => {
+                self.toast = Some(Toast {
+                    message: format!("No se pudo leer la imagen del portapapeles: {error}"),
+                    error: true,
+                    until: Instant::now() + Duration::from_secs(4),
+                });
+                ctx.request_repaint();
+                return;
+            }
+        };
+
+        let width = image.width as u32;
+        let height = image.height as u32;
+        let expected = u64::from(width) * u64::from(height) * 4;
+        if width == 0
+            || height == 0
+            || image.bytes.len() as u64 != expected
+            || width > codec::MAX_SOURCE_SIDE
+            || height > codec::MAX_SOURCE_SIDE
+            || u64::from(width) * u64::from(height) > u64::from(codec::MAX_SOURCE_PIXELS)
+        {
+            self.toast = Some(Toast {
+                message: "La imagen del portapapeles no tiene un tamaño válido.".to_owned(),
+                error: true,
+                until: Instant::now() + Duration::from_secs(4),
+            });
+            ctx.request_repaint();
+            return;
+        }
+
+        let Some(pixels) = RgbaImage::from_raw(width, height, image.bytes.into_owned()) else {
+            return;
+        };
+        let file_bytes = clipboard_png_size(&pixels);
+        self.set_source(
+            pixels,
+            "portapapeles.png".to_owned(),
+            "portapapeles".to_owned(),
+            "PNG".to_owned(),
+            file_bytes,
+            ctx,
+        );
+        self.toast = Some(Toast {
+            message: "Imagen pegada desde el portapapeles.".to_owned(),
+            error: false,
+            until: Instant::now() + Duration::from_secs(3),
+        });
+        ctx.request_repaint();
+    }
+
     fn open_file_dialog(&mut self, ctx: &egui::Context) {
         if let Some(path) = rfd::FileDialog::new()
             .add_filter(
@@ -420,7 +484,6 @@ impl HunkApp {
         self.result = None;
         self.format = OutputFormat::Webp;
         self.quality = 82;
-        self.compression = 70;
         self.ico_selected = [true; 6];
         self.split = 0.5;
         self.zoom = MIN_ZOOM;
@@ -553,7 +616,6 @@ impl HunkApp {
                                 self.reset(&ctx);
                             }
                         }
-                        local_badge(ui);
                     });
                 });
             });
@@ -606,8 +668,8 @@ impl HunkApp {
                     ui.set_min_height(ui.available_height());
                     ui.set_width(ui.available_width());
 
-                    // Reserva espacio para la calidad, el cuentagotas y la exportación.
-                    let top_height = (ui.available_height() - 335.0).max(160.0);
+                    // Reserva espacio para el cuentagotas y la exportación.
+                    let top_height = (ui.available_height() - 260.0).max(160.0);
                     egui::ScrollArea::vertical()
                         .id_salt("sidebar_scroll")
                         .auto_shrink([false, false])
@@ -625,12 +687,6 @@ impl HunkApp {
                             );
                         });
 
-                    ui.add_space(6.0);
-                    if self.format == OutputFormat::Ico {
-                        self.show_ico_sizes(ui, &ctx);
-                    } else {
-                        self.show_quality(ui, &ctx);
-                    }
                     ui.add_space(6.0);
                     self.show_color_panel(ui, &ctx);
                     ui.add_space(8.0);
@@ -657,7 +713,11 @@ impl HunkApp {
                 let button =
                     egui::Button::new(RichText::new("Cambiar").size(10.5).color(T::TEXT_MUTED))
                         .frame(false);
-                if ui.add(button).clicked() {
+                let response = ui
+                    .add(button)
+                    .on_hover_cursor(CursorIcon::PointingHand)
+                    .on_hover_text("Seleccionar otra imagen");
+                if response.clicked() {
                     change_requested = true;
                 }
             });
@@ -716,51 +776,46 @@ impl HunkApp {
         if let Some(format) = requested_format {
             self.set_format(format, ctx);
         }
+
+        ui.add_space(10.0);
+        if self.format == OutputFormat::Ico {
+            self.show_ico_sizes(ui, ctx);
+        } else {
+            self.show_quality(ui, ctx);
+        }
     }
 
     fn show_quality(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let lossy = self.format.is_lossy();
-        let hint = match self.format {
-            OutputFormat::Png => "Más compresión tarda más; el PNG sigue siendo sin pérdida.",
-            OutputFormat::Jxl => "JPEG XL es sin pérdida; más compresión tarda más.",
-            _ => "Más calidad conserva más detalle y aumenta el peso.",
-        };
-        let value = if lossy {
-            self.quality
+        let hint = if lossy {
+            "Más calidad conserva más detalle y aumenta el peso."
         } else {
-            self.compression
+            "Este formato conserva todos los píxeles; no necesita ajuste de calidad."
         };
         let header = ui.horizontal(|ui| {
-            ui.label(T::eyebrow(if lossy { "CALIDAD" } else { "COMPRESIÓN" }));
+            ui.label(T::eyebrow("CALIDAD"));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.label(
-                    RichText::new(format!("{value} %"))
-                        .size(12.0)
-                        .color(T::TEXT),
-                );
+                let value = if lossy {
+                    format!("{} %", self.quality)
+                } else {
+                    "Sin pérdida".to_owned()
+                };
+                ui.label(RichText::new(value).size(12.0).color(T::TEXT));
             });
         });
         header.response.on_hover_text(hint);
 
-        ui.add_space(3.0);
-        ui.spacing_mut().slider_width = (ui.available_width() - 8.0).max(120.0);
-        let changed = if lossy {
+        if lossy {
+            ui.add_space(3.0);
+            ui.spacing_mut().slider_width = (ui.available_width() - 8.0).max(120.0);
             let slider = egui::Slider::new(&mut self.quality, 1..=100)
                 .show_value(false)
                 .trailing_fill(true);
             let response = ui.add(slider);
             response.clone().on_hover_text(hint);
-            response.changed()
-        } else {
-            let slider = egui::Slider::new(&mut self.compression, 0..=100)
-                .show_value(false)
-                .trailing_fill(true);
-            let response = ui.add(slider);
-            response.clone().on_hover_text(hint);
-            response.changed()
-        };
-        if changed {
-            self.request_encode(ctx, Some(Duration::from_millis(ENCODE_DELAY_MS)));
+            if response.changed() {
+                self.request_encode(ctx, Some(Duration::from_millis(ENCODE_DELAY_MS)));
+            }
         }
     }
 
@@ -987,19 +1042,9 @@ impl HunkApp {
                         self.show_preview_footer(ui);
                     });
 
-                let dimensions = self
-                    .source
-                    .as_ref()
-                    .map(|source| (source.width, source.height))
-                    .unwrap_or_default();
                 ui.horizontal(|ui| {
                     ui.label(RichText::new("Vista previa").size(17.0).color(T::TEXT));
                     ui.add_space(4.0);
-                    ui.label(
-                        RichText::new(format!("{} × {} px", dimensions.0, dimensions.1))
-                            .size(9.5)
-                            .color(T::TEXT_MUTED),
-                    );
                     if self.format != OutputFormat::Ico {
                         ui.add_space(2.0);
                         let zoom_percent = (self.zoom * 100.0).round() as u32;
@@ -1336,27 +1381,20 @@ impl HunkApp {
                 .size(11.5)
                 .color(T::ACCENT),
             );
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if let (Some(original), Some(output)) = (source_size, output_size)
-                    && original > 0
-                {
-                    let change = (1.0 - output as f64 / original as f64) * 100.0;
-                    let (text, frame) = if change > 0.5 {
-                        (format!("−{change:.0} %"), T::pill_frame(true))
-                    } else if change < -0.5 {
-                        (format!("+{:.0} %", change.abs()), T::pill_frame(false))
-                    } else {
-                        ("= peso".to_owned(), T::pill_frame(false))
-                    };
-                    frame.show(ui, |ui| {
-                        ui.label(RichText::new(text).size(9.5).color(if change > 0.5 {
-                            T::ACCENT
-                        } else {
-                            T::TEXT_MUTED
-                        }));
-                    });
-                }
-            });
+            if let (Some(original), Some(output)) = (source_size, output_size)
+                && original > 0
+            {
+                let change = (1.0 - output as f64 / original as f64) * 100.0;
+                let (text, color) = if change > 0.5 {
+                    (format!("−{change:.0} %"), T::ACCENT)
+                } else if change < -0.5 {
+                    (format!("+{:.0} %", change.abs()), T::TEXT_MUTED)
+                } else {
+                    ("= peso".to_owned(), T::TEXT_MUTED)
+                };
+                ui.add_space(6.0);
+                ui.label(RichText::new(text).size(9.5).color(color));
+            }
         });
     }
 
@@ -1527,6 +1565,10 @@ impl eframe::App for HunkApp {
         });
         if let Some(path) = dropped {
             self.load_path(&path, &ctx);
+        }
+
+        if ctx.input(|input| input.modifiers.command && input.key_released(egui::Key::V)) {
+            self.paste_clipboard_image(&ctx);
         }
 
         if self.eyedropper_active && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
@@ -1719,28 +1761,16 @@ fn hline(ui: &mut egui::Ui) {
     ui.painter().rect_filled(rect, 0.0, T::BORDER);
 }
 
-fn local_badge(ui: &mut egui::Ui) {
-    let text = "100 % LOCAL";
-    let font = FontId::proportional(9.0);
-    let galley = ui
-        .painter()
-        .layout_no_wrap(text.to_owned(), font, T::TEXT_MUTED);
-    let width = galley.size().x + 30.0;
-    let (rect, _) = ui.allocate_exact_size(vec2(width, 26.0), Sense::hover());
-    let painter = ui.painter();
-    painter.rect(
-        rect,
-        CornerRadius::same(99),
-        T::SURFACE_2,
-        Stroke::new(1.0, T::BORDER),
-        StrokeKind::Inside,
-    );
-    painter.circle_filled(pos2(rect.left() + 14.0, rect.center().y), 3.5, T::ACCENT);
-    painter.galley(
-        pos2(rect.left() + 23.0, rect.center().y - galley.size().y / 2.0),
-        galley,
-        T::TEXT_MUTED,
-    );
+fn clipboard_png_size(image: &RgbaImage) -> u64 {
+    let mut bytes = Vec::new();
+    let mut encoder = png::Encoder::new(Cursor::new(&mut bytes), image.width(), image.height());
+    encoder.set_color(png::ColorType::Rgba);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::Fast);
+    if let Ok(mut writer) = encoder.write_header() {
+        let _ = writer.write_image_data(image.as_raw());
+    }
+    bytes.len() as u64
 }
 
 fn upload_texture(ctx: &egui::Context, name: &str, image: &RgbaImage) -> TextureHandle {

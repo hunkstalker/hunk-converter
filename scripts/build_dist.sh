@@ -32,9 +32,9 @@ HUNK-CONVERTER
 Convierte, comprime, compara y exporta imágenes sin salir de tu equipo.
 
 CÓMO USAR
-- Arrastra una imagen a la ventana o pulsa "Seleccionar una imagen".
+- Arrastra una imagen a la ventana, pulsa "Seleccionar una imagen" o pega con Ctrl+V.
 - Elige WebP, AVIF, JPG, PNG, JPEG XL o ICO.
-- Ajusta la calidad, la compresión o los tamaños del icono.
+- Ajusta la calidad o los tamaños del icono.
 - Activa el cuentagotas y haz clic sobre la imagen para obtener sus códigos de color.
 - Pulsa "Exportar" o Ctrl+E.
 

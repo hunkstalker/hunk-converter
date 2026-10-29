@@ -90,7 +90,6 @@ impl OutputFormat {
 pub struct EncodeOptions {
     pub format: OutputFormat,
     pub quality: u8,
-    pub compression: u8,
     pub ico_sizes: Vec<u32>,
     pub background: [u8; 4],
 }
@@ -153,15 +152,7 @@ pub fn encode(source: &RgbaImage, options: &EncodeOptions) -> Result<EncodedOutp
                     png::Encoder::new(Cursor::new(&mut bytes), source.width(), source.height());
                 encoder.set_color(png::ColorType::Rgba);
                 encoder.set_depth(png::BitDepth::Eight);
-                let compression = options.compression.min(100);
-                let deflate = if compression == 0 {
-                    png::DeflateCompression::NoCompression
-                } else {
-                    let level = 1 + ((u16::from(compression) - 1) * 8 / 99) as u8;
-                    png::DeflateCompression::Level(level)
-                };
-                encoder.set_deflate_compression(deflate);
-                encoder.set_filter(png::Filter::Adaptive);
+                encoder.set_compression(png::Compression::Balanced);
                 let mut writer = encoder
                     .write_header()
                     .map_err(|error| format!("No se pudo iniciar el PNG: {error}"))?;
@@ -200,15 +191,12 @@ pub fn encode(source: &RgbaImage, options: &EncodeOptions) -> Result<EncodedOutp
             }
         }
         OutputFormat::Jxl => {
-            let compression = options.compression.min(100);
-            let effort = ((u16::from(compression) * 9) / 100) as u8;
             let jxl_options = ZuneEncoderOptions::new(
                 source.width() as usize,
                 source.height() as usize,
                 ColorSpace::RGBA,
                 ZuneBitDepth::Eight,
-            )
-            .set_effort(effort);
+            );
             let mut bytes = Vec::new();
             JxlSimpleEncoder::new(source.as_raw(), jxl_options)
                 .encode(&mut bytes)
@@ -509,7 +497,6 @@ mod tests {
                 &EncodeOptions {
                     format,
                     quality: 82,
-                    compression: 70,
                     ico_sizes: Vec::new(),
                     background: [255, 255, 255, 255],
                 },
@@ -529,7 +516,6 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Webp,
                 quality: 20,
-                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },
@@ -540,7 +526,6 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Webp,
                 quality: 92,
-                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },
@@ -558,7 +543,6 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Jxl,
                 quality: 82,
-                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },
@@ -576,7 +560,6 @@ mod tests {
             &EncodeOptions {
                 format: OutputFormat::Png,
                 quality: 82,
-                compression: 70,
                 ico_sizes: Vec::new(),
                 background: [255; 4],
             },

@@ -33,6 +33,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 
 - Arrastrar y soltar un archivo en cualquier parte de la ventana.
 - Selector nativo de archivos con el botón **Seleccionar una imagen** o `Ctrl+O`.
+- `Ctrl+V` pega una imagen del portapapeles y sustituye la sesión actual si ya había una.
 - Botón **Cambiar** para reemplazar la imagen conservando los ajustes.
 - Formatos: **PNG, JPG/JPEG, WebP, BMP, TGA y SVG**.
 - SVG rasterizado con `resvg`, manteniendo proporción y transparencia.
@@ -47,13 +48,13 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | WebP | `.webp` | Con pérdida, calidad 1–100 | Sí | Opción recomendada |
 | AVIF | `.avif` | Con pérdida, calidad 1–100 | Sí | Compresión moderna |
 | JPG | `.jpg` | Con pérdida, calidad 1–100 | No; fondo blanco | Compatibilidad |
-| PNG | `.png` | Sin pérdida, compresión 0–100 | Sí | Calidad pixel a pixel |
-| JPEG XL | `.jxl` | Sin pérdida, compresión 0–100 | Sí | Alternativa moderna sin pérdida |
+| PNG | `.png` | Sin pérdida | Sí | Calidad pixel a pixel |
+| JPEG XL | `.jxl` | Sin pérdida | Sí | Alternativa moderna sin pérdida |
 | ICO | `.ico` | PNG por tamaño | Sí | Iconos de Windows |
 
-- Calidad inicial: **82 %**; compresión inicial: **70 %**.
-- WebP, JPG y AVIF muestran deslizador de calidad; PNG y JPEG XL muestran compresión; ICO usa selección de tamaños.
-- AVIF y JPEG XL se añaden como formatos de salida. JPEG XL se codifica sin pérdida; el deslizador ajusta el esfuerzo de compresión.
+- Calidad inicial: **82 %**.
+- WebP, JPG y AVIF muestran deslizador de calidad; PNG y JPEG XL son sin pérdida y no muestran deslizador; ICO usa selección de tamaños.
+- AVIF y JPEG XL se añaden como formatos de salida. JPEG XL se codifica sin pérdida.
 - JPG aplana la transparencia sobre blanco de forma predecible.
 - ICO incluye 16, 32, 48, 64, 128 y 256 px, ajustando la imagen centrada en un lienzo transparente sin recortar.
 - Se exige al menos un tamaño ICO seleccionado.
@@ -101,6 +102,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | Atajo | Acción |
 | --- | --- |
 | `Ctrl+O` | Abrir imagen |
+| `Ctrl+V` | Pegar una imagen del portapapeles |
 | `Ctrl+E` | Exportar |
 | `Ctrl+R` | Reiniciar la sesión |
 | `←` / `→` | Mover el divisor |
@@ -124,7 +126,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 ### Ventana y distribución
 
 - Tamaño inicial 1280 × 800; mínimo 1024 × 800.
-- Cabecera con marca, estado local y reinicio.
+- Cabecera con marca y botón de reinicio.
 - Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, cuentagotas y exportación.
 - La tarjeta lateral conserva los radios superiores y las esquinas inferiores cuadradas, con margen derecho y separación respecto a la cabecera.
 - Zona principal con cabecera de vista previa, lienzo y pie de pesos.
@@ -146,7 +148,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - **eframe/egui 0.37** con renderizador **glow** (OpenGL).
 - `image` 0.25 para decodificación PNG/JPG/WebP/BMP/TGA y codificación AVIF.
 - `webp`/libwebp para codificación WebP.
-- `png` 0.18 para niveles de compresión PNG.
+- `png` 0.18 para la codificación PNG.
 - `avif-decode`/rav1d para la vista previa AVIF.
 - `zune-jpegxl` para codificación JPEG XL y `jxl-oxide` para su vista previa.
 - `resvg` 0.49 para SVG.
@@ -279,7 +281,7 @@ Resumen del contexto de referencia:
 
 ## 9. Pruebas y verificación
 
-- **10 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, compresión, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
+- **10 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
 - CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.

@@ -13,17 +13,17 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 ## Características
 
 - **Arrastrar y soltar** en cualquier parte de la ventana, o selector nativo con `Ctrl+O`.
+- **Pegar desde el portapapeles** con `Ctrl+V`, haya o no una imagen cargada.
 - **Entrada:** PNG, JPG/JPEG, WebP, BMP, TGA y SVG.
 - **Salida:** WebP, AVIF, JPG, PNG, JPEG XL e ICO.
 - **Calidad ajustable** de 1 a 100 para WebP, JPG y AVIF (82 % por defecto).
-- **Compresión ajustable** para PNG y JPEG XL sin alterar los píxeles.
 - **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
 - **Zoom y paneo:** rueda del ratón sobre la imagen y clic derecho para desplazarte.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
 - **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
-- **PNG y JPEG XL sin pérdida**, con compresión ajustable y transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
+- **PNG y JPEG XL sin pérdida**, con transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
 - **Guardado directo** en `export/`, junto al ejecutable, sin sobrescribir archivos.
 - **Reinicio completo** con `Ctrl+R`.
@@ -79,9 +79,9 @@ cargo run --release
 
 ## Uso
 
-1. Arrastra una imagen a la ventana o pulsa **Seleccionar una imagen**.
+1. Arrastra una imagen a la ventana, pulsa **Seleccionar una imagen** o usa `Ctrl+V`.
 2. Elige **WebP**, **JPG**, **PNG** o **ICO**.
-3. Ajusta la calidad, la compresión o los tamaños del icono.
+3. Ajusta la calidad o los tamaños del icono.
 4. Arrastra el divisor para comparar. Usa la rueda para acercar y el clic derecho para moverte por la imagen.
 5. Activa el cuentagotas si necesitas extraer colores.
 6. Pulsa **Exportar** o `Ctrl+E`.
@@ -93,6 +93,7 @@ El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se
 | Atajo | Acción |
 | --- | --- |
 | `Ctrl+O` | Abrir imagen |
+| `Ctrl+V` | Pegar una imagen del portapapeles |
 | `Ctrl+E` | Exportar |
 | `Ctrl+R` | Reiniciar la aplicación |
 | `←` / `→` | Mover el divisor del comparador |
@@ -105,14 +106,14 @@ El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se
 | WebP | ✓ | ✓ | Sí | 1–100 |
 | AVIF | — | ✓ | Sí | 1–100 |
 | JPG / JPEG | ✓ | ✓ | No (fondo blanco) | 1–100 |
-| PNG | ✓ | ✓ | Sí | Compresión 0–100 |
-| JPEG XL | — | ✓ | Sí | Compresión 0–100 (sin pérdida) |
+| PNG | ✓ | ✓ | Sí | Sin pérdida |
+| JPEG XL | — | ✓ | Sí | Sin pérdida |
 | ICO | — | ✓ | Sí | Tamaños fijos |
 | BMP | ✓ | — | Según archivo | — |
 | TGA | ✓ | — | Según archivo | — |
 | SVG | ✓ | — | Rasterizado | — |
 
-Los SVG se rasterizan con `resvg` al tamaño declarado. AVIF y JPEG XL se añaden como formatos de salida; JPEG XL se codifica sin pérdida y su control ajusta el esfuerzo de compresión. PNG también es sin pérdida: su control no cambia la calidad, solo el tiempo y el tamaño del archivo. El límite de entrada es de 200 MB y 40 megapíxeles (máximo 16 384 px por lado).
+Los SVG se rasterizan con `resvg` al tamaño declarado. AVIF y JPEG XL se añaden como formatos de salida; JPEG XL se codifica sin pérdida. PNG y JPEG XL no muestran deslizador porque no modifican la calidad de la imagen. El límite de entrada es de 200 MB y 40 megapíxeles (máximo 16 384 px por lado).
 
 ## Builds portables
 
@@ -149,7 +150,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, compresión, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
+La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
 
 ## Rendimiento
 

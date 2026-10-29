@@ -96,7 +96,7 @@
 
 ## t-26 — Salida AVIF y JPEG XL
 
-**Descripción:** Añadir AVIF y JPEG XL como formatos de salida, con vista previa fiel del archivo codificado, control de calidad o compresión, exportación portable y soporte en las builds Linux y Windows.
+**Descripción:** Añadir AVIF y JPEG XL como formatos de salida, con vista previa fiel del archivo codificado, control de calidad cuando corresponda, exportación portable y soporte en las builds Linux y Windows.
 
 **Completada:** 2026-10-29
-**Resultado:** AVIF con calidad 1–100 y JPEG XL sin pérdida con compresión 0–100. Las vistas previas se decodifican con `avif-decode` y `jxl-oxide`. Se añadió `png` para compresión PNG ajustable, se reorganizó la rejilla de formatos y se corrigieron los badges del comparador. Verificado con pruebas y exportación real AVIF/JPEG XL.
+**Resultado:** AVIF con calidad 1–100 y JPEG XL sin pérdida. PNG y JPEG XL no muestran deslizador porque no modifican la calidad. Las vistas previas se decodifican con `avif-decode` y `jxl-oxide`. Se reorganizó la rejilla de formatos y se corrigieron los badges del comparador. Verificado con pruebas y exportación real AVIF/JPEG XL.

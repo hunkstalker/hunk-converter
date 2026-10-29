@@ -163,25 +163,6 @@ pub fn soft_frame() -> Frame {
         .inner_margin(Margin::symmetric(12, 10))
 }
 
-pub fn pill_frame(accent: bool) -> Frame {
-    if accent {
-        Frame::new()
-            .fill(ACCENT_SOFT)
-            .stroke(Stroke::new(
-                1.0,
-                Color32::from_rgba_unmultiplied(200, 244, 109, 90),
-            ))
-            .corner_radius(CornerRadius::same(99))
-            .inner_margin(Margin::symmetric(10, 5))
-    } else {
-        Frame::new()
-            .fill(SURFACE_2)
-            .stroke(Stroke::new(1.0, BORDER))
-            .corner_radius(CornerRadius::same(99))
-            .inner_margin(Margin::symmetric(10, 5))
-    }
-}
-
 pub fn muted(size: f32) -> egui::RichText {
     egui::RichText::new("").size(size).color(TEXT_MUTED)
 }

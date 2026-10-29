@@ -20,10 +20,10 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 ## 2. Estado actual
 
 - Interfaz completa en español y tema oscuro propio.
-- Carga por arrastre, selector nativo o argumento de línea de comandos.
+- Carga por arrastre, selector nativo, argumento de línea de comandos o `Ctrl+V` desde el portapapeles.
 - Entrada: PNG, JPG, WebP, BMP, TGA y SVG.
 - Salida: WebP, AVIF, JPG, PNG, JPEG XL e ICO.
-- Calidad 1–100 para WebP/JPG/AVIF; compresión 0–100 para PNG y JPEG XL sin pérdida; JPG aplanado sobre blanco.
+- Calidad 1–100 para WebP/JPG/AVIF; PNG y JPEG XL sin pérdida; JPG aplanado sobre blanco.
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas y códigos HEX/RGB/RGBA/HSL; copia al portapapeles.
@@ -67,6 +67,7 @@ Builds portables:
 
 ## 4. Decisiones que no se deben romper
 
+- **Portapapeles:** `Ctrl+V` intenta leer una imagen del portapapeles y sustituye la imagen actual; si no hay imagen, no hace nada.
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
 - **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
 - **Vista previa fiel:** decodificar el buffer final, no estimar.
@@ -75,8 +76,8 @@ Builds portables:
 - **Vista:** el zoom se reinicia al cargar otra imagen o reiniciar; el encuadre se conserva al cambiar de formato.
 - **JPG:** transparencia compuesta sobre blanco.
 - **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
-- **Calidad inicial:** 82 %; compresión inicial: 70 %.
-- **PNG y JPEG XL:** sin pérdida; sus deslizadores controlan compresión/esfuerzo, no calidad.
+- **Calidad inicial:** 82 %.
+- **PNG y JPEG XL:** sin pérdida y sin deslizador de calidad.
 - **AVIF:** salida con pérdida y control de calidad; vista previa decodificada con `avif-decode`.
 - **Badges del comparador:** el formato de salida va a la izquierda y `ORIGINAL` a la derecha, igual que las mitades visibles.
 - **Reinicio:** restablece formato, calidad, tamaños y muestra de color.
