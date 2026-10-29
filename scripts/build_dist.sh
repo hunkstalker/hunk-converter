@@ -7,6 +7,9 @@
 # Windows:
 #   ./scripts/build_dist.sh windows
 #
+# macOS universal:
+#   ./scripts/build_dist.sh macos
+#
 # Requisitos:
 #   - Rust 1.99.1
 #   - Compilador de C y linker para el target
@@ -27,7 +30,7 @@ common_files() {
 	cp "$ROOT/LICENSE" "$folder/LICENSE.txt"
 	cp "$ROOT/assets/fonts/OFL.txt" "$folder/LICENCIAS/Manrope-OFL.txt"
 	cat >"$folder/LEEME.txt" <<'TXT'
-HUNK-CONVERTER
+HUNK Converter
 ==============
 Convierte, comprime, compara y exporta imágenes sin salir de tu equipo.
 
@@ -47,8 +50,28 @@ entre español, catalán e inglés desde la cabecera.
 
 - La aplicación no necesita instalación ni conexión a internet.
 - En Linux se requieren las bibliotecas gráficas habituales (X11/OpenGL).
+- En Linux, hunk-converter.desktop y hunk-converter.png permiten integrar la app en el menú.
 - La versión Windows se distribuye como ejecutable portable.
+- En macOS, abre "HUNK Converter.app" desde la carpeta extraída.
 TXT
+}
+
+install_linux_launcher() {
+	local folder="$1"
+	cp "$ROOT/assets/branding/icon_256.png" "$folder/hunk-converter.png"
+	cat >"$folder/hunk-converter.desktop" <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=HUNK Converter
+GenericName=Image Converter
+Comment=Convert, compress, compare and sample images
+Exec=hunk-converter
+TryExec=hunk-converter
+Icon=hunk-converter
+Terminal=false
+Categories=Graphics;Photography;
+StartupWMClass=hunk-converter
+DESKTOP
 }
 
 build_linux() {
@@ -60,6 +83,7 @@ build_linux() {
 	cp "$ROOT/target/release/$BIN_NAME" "$folder/hunk-converter"
 	chmod +x "$folder/hunk-converter"
 	common_files "$folder"
+	install_linux_launcher "$folder"
 	tar -czf "$DIST/hunk-converter-$VERSION-linux-x86_64.tar.gz" \
 		-C "$DIST" "hunk-converter-$VERSION-linux-x86_64"
 	echo "✓ $folder"
@@ -85,6 +109,52 @@ build_windows() {
 	echo "✓ $folder"
 }
 
+build_macos() {
+	local folder="$DIST/hunk-converter-$VERSION-macos-universal"
+	local app="$folder/HUNK Converter.app"
+	local arm="${MACOS_ARM_TARGET:-aarch64-apple-darwin}"
+	local intel="${MACOS_X86_TARGET:-x86_64-apple-darwin}"
+	echo "→ Compilando macOS universal ($arm + $intel)"
+	cargo build --release --target "$arm" --bin "$BIN_NAME"
+	cargo build --release --target "$intel" --bin "$BIN_NAME"
+	rm -rf "$folder"
+	mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+	lipo -create \
+		"$ROOT/target/$arm/release/$BIN_NAME" \
+		"$ROOT/target/$intel/release/$BIN_NAME" \
+		-output "$app/Contents/MacOS/hunk-converter"
+	chmod +x "$app/Contents/MacOS/hunk-converter"
+	cp "$ROOT/assets/branding/icon.icns" "$app/Contents/Resources/icon.icns"
+	cat > "$app/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key><string>es</string>
+	<key>CFBundleDisplayName</key><string>HUNK Converter</string>
+	<key>CFBundleExecutable</key><string>hunk-converter</string>
+	<key>CFBundleIconFile</key><string>icon.icns</string>
+	<key>CFBundleIdentifier</key><string>com.hunkstalker.hunk-converter</string>
+	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+	<key>CFBundleName</key><string>HUNK Converter</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>${VERSION}</string>
+	<key>CFBundleVersion</key><string>${VERSION}</string>
+	<key>LSApplicationCategoryType</key><string>public.app-category.graphics-design</string>
+	<key>LSMinimumSystemVersion</key><string>11.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>NSPrincipalClass</key><string>NSApplication</string>
+</dict>
+</plist>
+PLIST
+	ln -s "HUNK Converter.app/Contents/MacOS/hunk-converter" "$folder/hunk-converter"
+	common_files "$folder"
+	tar -czf "$DIST/hunk-converter-$VERSION-macos-universal.tar.gz" \
+		-C "$DIST" "hunk-converter-$VERSION-macos-universal"
+	echo "✓ $app"
+	echo "✓ $DIST/hunk-converter-$VERSION-macos-universal.tar.gz"
+}
+
 mkdir -p "$DIST"
 case "$TARGET" in
 linux) build_linux ;;
@@ -93,8 +163,9 @@ all)
 	build_linux
 	build_windows
 	;;
+macos) build_macos ;;
 *)
-	echo "Uso: $0 [linux|windows|all]" >&2
+	echo "Uso: $0 [linux|windows|macos|all]" >&2
 	exit 2
 	;;
 esac

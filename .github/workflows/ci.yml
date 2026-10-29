@@ -1,0 +1,216 @@
+name: CI y release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "*.*.*"
+      - "v*.*.*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Formato, lints y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+          components: clippy, rustfmt
+
+      - name: Instalar NASM
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Formato
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Pruebas
+        run: cargo test
+
+  linux:
+    if: github.event_name != 'pull_request'
+    name: Linux Debian x86_64
+    needs: test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+
+      - name: Instalar NASM
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Compilar y empaquetar
+        run: ./scripts/build_dist.sh linux
+
+      - name: Verificar lanzador e icono de Linux
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)"
+          folder="dist/hunk-converter-$version-linux-x86_64"
+          test -f "$folder/hunk-converter.desktop"
+          test -f "$folder/hunk-converter.png"
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v7
+        with:
+          name: hunk-converter-linux-x86_64
+          path: dist/hunk-converter-*-linux-x86_64.tar.gz
+          if-no-files-found: error
+
+  windows:
+    if: github.event_name != 'pull_request'
+    name: Windows 10/11 x86_64
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+
+      - name: Instalar NASM
+        shell: pwsh
+        run: |
+          choco install nasm -y --no-progress
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Compilar y empaquetar
+        shell: bash
+        env:
+          WINDOWS_TARGET: x86_64-pc-windows-msvc
+        run: ./scripts/build_dist.sh windows
+
+      - name: Verificar icono y metadatos del .exe
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          $exe = "dist/hunk-converter-$version-windows-x86_64/hunk-converter.exe"
+          $description = (Get-Item $exe).VersionInfo.FileDescription
+          if ($description -notlike "HUNK Converter*") {
+            throw "El .exe no contiene los recursos de icono/metadatos esperados: '$description'"
+          }
+
+      - name: Crear zip portable
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          $folder = "dist/hunk-converter-$version-windows-x86_64"
+          Compress-Archive -Path $folder -DestinationPath "$folder.zip" -Force
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v7
+        with:
+          name: hunk-converter-windows-x86_64
+          path: dist/hunk-converter-*-windows-x86_64.zip
+          if-no-files-found: error
+
+  macos:
+    if: github.event_name != 'pull_request'
+    name: macOS universal
+    needs: test
+    runs-on: macos-14
+    timeout-minutes: 50
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Instalar Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.99.1
+
+      - name: Añadir targets universales
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - name: Instalar NASM
+        run: brew install nasm
+
+      - name: Compilar y empaquetar
+        run: ./scripts/build_dist.sh macos
+
+      - name: Verificar .app universal
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)"
+          app="dist/hunk-converter-$version-macos-universal/HUNK Converter.app"
+          test -f "$app/Contents/Resources/icon.icns"
+          lipo -info "$app/Contents/MacOS/hunk-converter" | grep -q "x86_64"
+          lipo -info "$app/Contents/MacOS/hunk-converter" | grep -q "arm64"
+
+      - name: Subir artefacto
+        uses: actions/upload-artifact@v7
+        with:
+          name: hunk-converter-macos-universal
+          path: dist/hunk-converter-*-macos-universal.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: Publicar release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - test
+      - linux
+      - windows
+      - macos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar artefactos
+        uses: actions/download-artifact@v8
+        with:
+          pattern: hunk-converter-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generar checksums
+        run: |
+          cd release-assets
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: HUNK Converter ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: release-assets/*
+          body: |
+            ## HUNK Converter ${{ github.ref_name }}
+
+            Builds portables generadas automáticamente desde el tag.
+
+            - **Linux Debian x86_64:** `.tar.gz`, compilada en Ubuntu 22.04
+              (glibc 2.35 o superior).
+            - **Windows 10/11 x86_64:** `.zip` portable con `hunk-converter.exe`.
+            - **macOS universal:** `.tar.gz` con binario `arm64 + x86_64`.
+
+            La build de macOS no está firmada ni notarizada. El archivo
+            `SHA256SUMS.txt` contiene las sumas de todos los artefactos.

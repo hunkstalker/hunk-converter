@@ -1,12 +1,15 @@
+use std::io::Cursor;
 use std::path::Path;
 
-use image::{ImageFormat, RgbaImage, imageops};
+use image::{ImageDecoder, ImageFormat, RgbaImage, imageops};
 
 use crate::domain::error::{EncodeError, LoadError};
 
 mod encoders;
 mod ico;
 mod svg;
+
+pub use ico::{IcoOutput, encode_ico};
 
 pub use crate::domain::format::{OutputFormat, format_bytes};
 
@@ -100,12 +103,7 @@ pub fn load_image_file(path: &Path) -> Result<LoadedImage, LoadError> {
     let guessed = image::guess_format(&bytes)
         .or_else(|_| ImageFormat::from_path(path))
         .map_err(|_| LoadError::Unsupported)?;
-    let decoded = image::load_from_memory_with_format(&bytes, guessed).map_err(|source| {
-        LoadError::Decode {
-            source: Box::new(source),
-        }
-    })?;
-    let pixels = decoded.to_rgba8();
+    let pixels = decode_raster(&bytes, guessed)?;
     validate_dimensions(pixels.width(), pixels.height())?;
 
     Ok(LoadedImage {
@@ -113,6 +111,23 @@ pub fn load_image_file(path: &Path) -> Result<LoadedImage, LoadError> {
         format: format_name(guessed).to_owned(),
         file_bytes: bytes.len() as u64,
     })
+}
+
+fn decode_raster(bytes: &[u8], format: ImageFormat) -> Result<RgbaImage, LoadError> {
+    let mut decoder = image::ImageReader::with_format(Cursor::new(bytes), format)
+        .into_decoder()
+        .map_err(|source| LoadError::Decode {
+            source: Box::new(source),
+        })?;
+    let orientation = decoder.orientation().map_err(|source| LoadError::Decode {
+        source: Box::new(source),
+    })?;
+    let mut image =
+        image::DynamicImage::from_decoder(decoder).map_err(|source| LoadError::Decode {
+            source: Box::new(source),
+        })?;
+    image.apply_orientation(orientation);
+    Ok(image.to_rgba8())
 }
 
 fn validate_dimensions(width: u32, height: u32) -> Result<(), LoadError> {
@@ -156,7 +171,8 @@ fn format_name(format: ImageFormat) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::Rgba;
+    use image::codecs::jpeg::JpegEncoder;
+    use image::{ExtendedColorType, ImageEncoder, Rgb, RgbImage, Rgba};
 
     fn noise(width: u32, height: u32) -> RgbaImage {
         let mut seed = 0xA11CE_u32;
@@ -267,5 +283,97 @@ mod tests {
         .unwrap();
         let decoded = image::load_from_memory(&output.bytes).unwrap().to_rgba8();
         assert_eq!(decoded.get_pixel(2, 2).0[3], 128);
+    }
+    fn jpeg_with_orientation(orientation: u8) -> Vec<u8> {
+        let source = RgbImage::from_fn(32, 20, |x, _| {
+            if x < 16 {
+                Rgb([220, 24, 24])
+            } else {
+                Rgb([24, 24, 220])
+            }
+        });
+        let mut jpeg = Vec::new();
+        JpegEncoder::new_with_quality(Cursor::new(&mut jpeg), 100)
+            .write_image(source.as_raw(), 32, 20, ExtendedColorType::Rgb8)
+            .unwrap();
+        let exif = exif_orientation(orientation);
+        let mut with_exif = Vec::with_capacity(jpeg.len() + exif.len());
+        with_exif.extend_from_slice(&jpeg[..2]);
+        with_exif.extend_from_slice(&exif);
+        with_exif.extend_from_slice(&jpeg[2..]);
+        with_exif
+    }
+
+    fn exif_orientation(orientation: u8) -> Vec<u8> {
+        let mut tiff = Vec::new();
+        tiff.extend_from_slice(b"II*\0");
+        tiff.extend_from_slice(&8u32.to_le_bytes());
+        tiff.extend_from_slice(&1u16.to_le_bytes());
+        tiff.extend_from_slice(&0x0112u16.to_le_bytes());
+        tiff.extend_from_slice(&3u16.to_le_bytes());
+        tiff.extend_from_slice(&1u32.to_le_bytes());
+        let mut value = [0u8; 4];
+        value[..2].copy_from_slice(&(u16::from(orientation)).to_le_bytes());
+        tiff.extend_from_slice(&value);
+        tiff.extend_from_slice(&0u32.to_le_bytes());
+
+        let mut payload = Vec::new();
+        payload.extend_from_slice(b"Exif\0\0");
+        payload.extend_from_slice(&tiff);
+        let mut app1 = Vec::new();
+        app1.extend_from_slice(&[0xFF, 0xE1]);
+        app1.extend_from_slice(&((payload.len() + 2) as u16).to_be_bytes());
+        app1.extend_from_slice(&payload);
+        app1
+    }
+
+    fn decoded_orientation(orientation: u8) -> RgbaImage {
+        decode_raster(&jpeg_with_orientation(orientation), ImageFormat::Jpeg).unwrap()
+    }
+
+    fn assert_red(pixel: [u8; 4]) {
+        assert!(
+            pixel[0] > 180 && pixel[1] < 80 && pixel[2] < 80,
+            "se esperaba rojo: {pixel:?}"
+        );
+    }
+
+    fn assert_blue(pixel: [u8; 4]) {
+        assert!(
+            pixel[2] > 180 && pixel[0] < 80 && pixel[1] < 80,
+            "se esperaba azul: {pixel:?}"
+        );
+    }
+
+    #[test]
+    fn applies_exif_orientation_one() {
+        let image = decoded_orientation(1);
+        assert_eq!(image.dimensions(), (32, 20));
+        assert_red(image.get_pixel(4, 10).0);
+        assert_blue(image.get_pixel(28, 10).0);
+    }
+
+    #[test]
+    fn applies_exif_orientation_three() {
+        let image = decoded_orientation(3);
+        assert_eq!(image.dimensions(), (32, 20));
+        assert_blue(image.get_pixel(4, 10).0);
+        assert_red(image.get_pixel(28, 10).0);
+    }
+
+    #[test]
+    fn applies_exif_orientation_six() {
+        let image = decoded_orientation(6);
+        assert_eq!(image.dimensions(), (20, 32));
+        assert_red(image.get_pixel(5, 5).0);
+        assert_blue(image.get_pixel(5, 26).0);
+    }
+
+    #[test]
+    fn applies_exif_orientation_eight() {
+        let image = decoded_orientation(8);
+        assert_eq!(image.dimensions(), (20, 32));
+        assert_blue(image.get_pixel(5, 5).0);
+        assert_red(image.get_pixel(5, 26).0);
     }
 }

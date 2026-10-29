@@ -55,11 +55,8 @@ impl HunkApp {
 }
 
 fn export_directory() -> Result<PathBuf, ExportError> {
-    std::env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(Path::to_path_buf))
-        .map(|path| path.join("export"))
-        .ok_or(ExportError::MissingExecutableDirectory)
+    let root = crate::settings::app_root().map_err(|_| ExportError::MissingExecutableDirectory)?;
+    Ok(root.join("export"))
 }
 
 fn unique_path(directory: &Path, stem: &str, extension: &str) -> PathBuf {

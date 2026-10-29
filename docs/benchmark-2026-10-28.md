@@ -2,14 +2,14 @@
 
 > Fecha: 2026-10-28. Mediciones orientativas de una sola sesión.
 > Referencia histórica: hunk-converter 0.1.0 (Godot 4.7.2).
-> Aplicación actual: hunk-converter **0.2.0** (Rust + egui).
+> Aplicación actual: hunk-converter **1.0.0** (Rust + egui). Las mediciones de rendimiento se tomaron sobre 0.2.0; la ruta de codificación no cambió.
 
 ## Resumen
 
-| Métrica | Godot 0.1.0 | Rust/egui 0.2.0 | Diferencia |
+| Métrica | Godot 0.1.0 | Rust/egui 1.0.0 | Diferencia |
 | --- | ---: | ---: | ---: |
-| Binario Linux | 70,7 MiB | **16,1 MiB** | **−77,3 %** |
-| Binario Windows | 104,7 MiB | **14,7 MiB** | **−86,0 %** |
+| Binario Linux | 70,7 MiB | **16,1 MiB** | **−77,2 %** |
+| Binario Windows | 104,7 MiB | **14,8 MiB** | **−85,9 %** |
 | Arranque a ventana (mediana, 20 runs) | 239,8 ms | **200,2 ms** | **−16,5 %** |
 | RAM en reposo (RSS) | 209,7 MiB | **102,0 MiB** | **−51,4 %** |
 | RAM con imagen 12 MP | 316,9 MiB | **212,6 MiB** | **−32,9 %** |
@@ -25,7 +25,7 @@ están muy influidas por usar llvmpipe sin GPU ni VSync; deben leerse como una
 diferencia de arquitectura de repintado, no como vatios reales en un equipo de
 escritorio.
 
-La aplicación 0.2.0 añade rasterización SVG, cuentagotas, historial de
+La aplicación 1.0.0 añade rasterización SVG, cuentagotas, historial de
 colores, tres idiomas, zoom, paneo y los códecs AVIF y JPEG XL. El binario es bastante mayor que el de la prueba de
 concepto inicial, sobre todo por los decodificadores y codificadores de AVIF y
 JPEG XL. Las cifras de esta página corresponden al paquete final, no al piloto
@@ -49,14 +49,14 @@ Las mediciones de interfaz se hicieron con las builds portables finales.
 
 ## Distribución
 
-| Artefacto | Godot | Rust/egui 0.2.0 | Reducción |
+| Artefacto | Godot | Rust/egui 1.0.0 | Reducción |
 | --- | ---: | ---: | ---: |
-| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 16.866.416 B (16,1 MiB) | 77,3 % |
-| Carpeta Linux | 74.178.860 B | 16.874.395 B | 77,3 % |
-| `.tar.gz` Linux | 27,7 MiB | 7,2 MiB | 74,1 % |
-| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 15.420.416 B (14,7 MiB) | 86,0 % |
-| Carpeta Windows | 109.842.428 B | 15.428.395 B | 86,0 % |
-| `.zip` Windows | 36,9 MiB | 6,7 MiB | 82,0 % |
+| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 16.934.480 B (16,1 MiB) | 77,2 % |
+| Carpeta Linux | 74.178.860 B | 16.997.689 B | 77,1 % |
+| `.tar.gz` Linux | 27,7 MiB | 7,3 MiB | 73,7 % |
+| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 15.488.000 B (14,8 MiB) | 85,9 % |
+| Carpeta Windows | 109.842.428 B | 15.496.139 B | 85,9 % |
+| `.zip` Windows | 36,9 MiB | 6,7 MiB | 81,8 % |
 
 Dependencias:
 
@@ -74,7 +74,7 @@ Tiempo desde `spawn` hasta que la ventana aparece en el árbol X11. Medición
 externa con `xwininfo` y sondeo aproximado de 5 ms. No es tiempo hasta primer
 frame pintado y no es un arranque en frío real.
 
-| Serie | Godot | Rust/egui 0.2.0 | Diferencia |
+| Serie | Godot | Rust/egui 1.0.0 | Diferencia |
 | --- | ---: | ---: | ---: |
 | Mediana, 20 arranques en caliente | 239,8 ms | **200,2 ms** | −16,5 % |
 | Media | 243,5 ms | **202,5 ms** | −16,8 % |
@@ -127,13 +127,13 @@ vista previa. La memoria es el RSS máximo de `/usr/bin/time`.
 | Entrada | App | Decode | WebP | JPG | PNG | ICO | Total | Pico |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1200×800 (1 MP) | Godot | 15,9 | 88,7 | 143,6 | 539,6 | 89,1 | 1,11 s | 111,6 MiB |
-| | Rust 0.2.0 | 11,2 | **54,9** | **21,1** | **246,5** | **39,3** | **0,40 s** | **18,9 MiB** |
+| | Rust 1.0.0 | 11,2 | **54,9** | **21,1** | **246,5** | **39,3** | **0,40 s** | **18,9 MiB** |
 | 2400×1800 (4 MP) | Godot | 71,0 | 488,4 | 684,5 | 2278,3 | 297,9 | 3,95 s | 206,4 MiB |
-| | Rust 0.2.0 | 38,1 | **325,7** | **196,2** | **1226,9** | **153,4** | **1,97 s** | **119,5 MiB** |
+| | Rust 1.0.0 | 38,1 | **325,7** | **196,2** | **1226,9** | **153,4** | **1,97 s** | **119,5 MiB** |
 | 4000×3000 (12 MP) | Godot | 198,3 | 1121,0 | 1137,0 | 4723,4 | 723,9 | 8,04 s | 317,1 MiB |
-| | Rust 0.2.0 | 88,1 | **760,9** | **400,3** | **3221,4** | **468,2** | **4,97 s** | **231,8 MiB** |
+| | Rust 1.0.0 | 88,1 | **760,9** | **400,3** | **3221,4** | **468,2** | **4,97 s** | **231,8 MiB** |
 | 6000×4000 (24 MP) | Godot | 396,4 | 2100,1 | 1616,6 | 8216,1 | 1438,6 | 13,99 s | 540,6 MiB |
-| | Rust 0.2.0 | 195,1 | **1412,1** | **684,9** | **6360,5** | **956,7** | **9,65 s** | **353,4 MiB** |
+| | Rust 1.0.0 | 195,1 | **1412,1** | **684,9** | **6360,5** | **956,7** | **9,65 s** | **353,4 MiB** |
 
 Tiempo total del proceso (incluye arranque del motor/benchmark):
 
@@ -165,7 +165,7 @@ el WebP menores con el mismo valor nominal 82.
 ## Interpretación
 
 1. **Tamaño:** la diferencia sigue siendo enorme: 16,1 MiB frente a 70,7 MiB
-   en Linux y 14,7 MiB frente a 104,7 MiB en Windows, incluso después de añadir
+   en Linux y 14,8 MiB frente a 104,7 MiB en Windows, incluso después de añadir
    SVG, cuentagotas, historial, idiomas, zoom, AVIF, JPEG XL y el enlace al
    repositorio.
 2. **Arranque:** la aplicación Rust abre la ventana alrededor de un 17 % antes.
@@ -207,7 +207,7 @@ de velocidad de codificación es clara pero menor que la mejora de huella, y no
 hay ganancia de paralelismo: ambos son esencialmente mononúcleo en los códecs
 medidos.
 
-La aplicación 0.2.0 conserva esa ventaja después de incorporar SVG, el
+La aplicación 1.0.0 conserva esa ventaja después de incorporar SVG, el
 cuentagotas, historial, idiomas, zoom, AVIF y JPEG XL. El siguiente coste relevante es completar accesibilidad, EXIF y
 posibles códecs adicionales, que pueden alterar tanto el rendimiento como el
 tamaño final.

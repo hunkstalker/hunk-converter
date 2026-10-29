@@ -1,11 +1,11 @@
-# Proyecto — Hunk Converter
+# Proyecto — HUNK Converter
 
 > Documento vivo. Última actualización: 2026-10-29.
-> Versión actual: **0.2.0** · Estado: **aplicación principal Rust + egui, portable y funcional**.
+> Versión actual: **1.0.0** · Estado: **aplicación principal Rust + egui, portable y funcional**.
 
 ## 1. Visión
 
-Hunk Converter es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. También genera iconos `.ico` multirresolución para Windows.
+HUNK Converter es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. También genera iconos `.ico` multirresolución para Windows.
 
 El producto está diseñado para hacer tres operaciones sin fricción:
 
@@ -36,6 +36,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - `Ctrl+V` pega una imagen del portapapeles y sustituye la sesión actual si ya había una.
 - Botón **Cambiar** para reemplazar la imagen conservando los ajustes.
 - Formatos: **PNG, JPG/JPEG, WebP, BMP, TGA y SVG**.
+- Orientación EXIF aplicada al cargar JPG/WebP antes de mostrar, comparar y exportar.
 - SVG rasterizado con `resvg`, manteniendo proporción y transparencia.
 - Detección por contenido con respaldo por extensión.
 - Límites: **200 MB**, **40 megapíxeles** y **16 384 px por lado**.
@@ -164,7 +165,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - `zune-jpegxl` para codificación JPEG XL y `jxl-oxide` para su vista previa.
 - `resvg` 0.49 para SVG.
 - `sys-locale` para detectar el idioma del sistema.
-- Icono original de máscara de gas en `assets/branding/icon.svg`; se rasteriza con `resvg`.
+- Icono de máscara de gas en `assets/branding/hunk-converter.png`, con fuente editable `.af`; `make_icons` genera `icon_256.png`, `icon.ico` e `icon.icns`.
 - `rfd` para diálogo de archivos nativo.
 - Procesamiento en un hilo con canal `std::sync::mpsc`.
 - Sin runtime de Python, Node, Godot ni ImageMagick.
@@ -197,8 +198,8 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | `src/demo.rs` | Imagen sintética para demos y capturas |
 | `src/bin/bench.rs` | Benchmark de códecs y memoria |
 | `src/bin/make_demo.rs` | Generador de imágenes de prueba |
-| `src/bin/make_icon.rs` | Rasteriza el icono SVG a PNG |
-| `scripts/build_dist.sh` | Empaquetado portable Linux/Windows |
+| `src/bin/make_icons.rs` | Genera `icon_256.png`, `icon.ico` e `icon.icns` desde el PNG fuente |
+| `scripts/build_dist.sh` | Empaquetado portable Linux/Windows/macOS |
 | `docs/benchmark-2026-10-28.md` | Comparación de rendimiento y recursos |
 | `docs/arquitectura.md` | Decisiones de arquitectura y reglas de código |
 | `tests` integrados en los módulos | Pruebas unitarias Rust |
@@ -271,7 +272,7 @@ Archivo local
 - Paleta carbón con acento lima.
 - Manrope incluida con licencia OFL.
 - Tema egui personalizado: tipografía, botones, paneles, sliders, scrollbars y tooltips.
-- Icono de la aplicación embebido desde `assets/branding/icon_256.png`.
+- Icono de la aplicación generado desde `assets/branding/hunk-converter.png` e integrado en la ventana, el `.exe` de Windows (`icon.ico`), el `.app` de macOS (`icon.icns`) y el lanzador `.desktop` de Linux.
 - Las capturas de documentación se generan con el modo de demo y el capturador interno.
 
 ## 6. Distribución portable
@@ -286,7 +287,7 @@ Archivo local
 ### Estructura de la build
 
 ```text
-hunk-converter-0.2.0-windows-x86_64/
+hunk-converter-1.0.0-windows-x86_64/
 ├── hunk-converter.exe
 ├── config.ini          (se crea al primer arranque)
 ├── export/
@@ -297,11 +298,13 @@ hunk-converter-0.2.0-windows-x86_64/
 ```
 
 - El modo Linux genera una carpeta y un `.tar.gz`.
-- El modo Windows genera una carpeta y un `.zip` si `zip` está disponible.
+- El modo Windows genera una carpeta y un `.zip` (el CI lo crea con PowerShell).
+- El modo macOS genera una carpeta y un `.tar.gz` con binario universal `arm64 + x86_64`.
 - La build de Linux depende de las bibliotecas gráficas del sistema (X11/OpenGL), como cualquier app nativa.
 - Compilar en x86/x86_64 requiere NASM por el decodificador AVIF `rav1d`.
 - La build Windows importa únicamente DLLs del sistema; no necesita DLLs de MinGW.
 - La build Windows no se ha ejecutado todavía en un Windows real (t-23).
+- El CI de GitHub compila Linux Debian x86_64, Windows 10/11 x86_64 y macOS universal al empujar un tag `*.*.*` o `v*.*.*`.
 
 ## 7. Rendimiento y recursos
 
@@ -318,23 +321,23 @@ Resumen del contexto de referencia:
 
 ## 8. Límites conocidos
 
-- No se interpreta la orientación EXIF ni se conservan metadatos (`t-10`).
+- No se conservan metadatos, pero la orientación EXIF se aplica a los píxeles al cargar.
 - No hay redimensionado ni recorte, ni procesamiento por lotes (`t-11`, `t-12`).
 - El modo 1:1, los botones/gestos de zoom y los atajos de encuadre siguen pendientes (`t-16`).
 - HEIC no está soportado; AVIF y JPEG XL sí están disponibles como salida (`t-15`).
 - No se conservan perfiles ICC.
 - La accesibilidad nativa completa y el uso con lector de pantalla están pendientes (`t-22`).
 - La build Windows se genera, pero no se ha ejecutado en Windows (`t-23`).
-- El icono nativo del `.exe` de Windows aún no está incrustado (`t-24`).
-- No hay build macOS en esta versión (`t-17`).
+- El icono del `.exe` de Windows se incrusta en la build MSVC; falta comprobarlo visualmente en un Windows real (`t-24`).
+- La build macOS universal se genera en CI, pero no está firmada ni notarizada (`t-17`).
 - El resultado ICO usa PNG dentro del contenedor, compatible con Windows moderno.
 
 ## 9. Pruebas y verificación
 
-- **23 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG, historial, bloqueos, configuración, nombres de exportación y zona de agarre del comparador.
+- **29 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, orientación EXIF, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG, historial, bloqueos, configuración, nombres de exportación, rutas portables y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
-- CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.
+- CI de Godot histórica en el repositorio archivado; CI de Rust con builds Linux, Windows y macOS en este repositorio.
 - Exportación Linux verificada bajo Xvfb: el archivo aparece en `export/` junto al binario.
 - Prueba de arranque, memoria, CPU y escalado de códecs documentada en el informe de benchmark.
 

@@ -26,7 +26,7 @@ impl HunkApp {
                     ui.add_space(2.0);
                     ui.vertical(|ui| {
                         ui.add_space(1.0);
-                        ui.label(RichText::new("Hunk Converter").size(21.0).color(T::TEXT));
+                        ui.label(RichText::new("HUNK Converter").size(21.0).color(T::TEXT));
                         ui.label(
                             RichText::new("IMAGE TOOLBOX")
                                 .size(8.5)

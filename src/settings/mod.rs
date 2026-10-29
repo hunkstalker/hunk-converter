@@ -44,11 +44,34 @@ impl ConfigWarning {
     }
 }
 
+pub fn app_root() -> Result<PathBuf, std::io::Error> {
+    std::env::current_exe().map(|path| portable_root_from(&path))
+}
+
 pub fn config_path() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|path| path.parent().map(|parent| parent.join("config.ini")))
-        .unwrap_or_else(|| PathBuf::from("config.ini"))
+    app_root()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("config.ini")
+}
+
+fn portable_root_from(executable: &Path) -> PathBuf {
+    let Some(macos) = executable.parent() else {
+        return PathBuf::from(".");
+    };
+    let Some(contents) = macos.parent() else {
+        return macos.to_path_buf();
+    };
+    let Some(app) = contents.parent() else {
+        return macos.to_path_buf();
+    };
+    let is_macos_bundle = macos.file_name().is_some_and(|name| name == "MacOS")
+        && contents.file_name().is_some_and(|name| name == "Contents")
+        && app.extension().is_some_and(|extension| extension == "app");
+    if is_macos_bundle {
+        app.parent().unwrap_or(app).to_path_buf()
+    } else {
+        macos.to_path_buf()
+    }
 }
 
 impl Settings {
@@ -137,5 +160,30 @@ mod tests {
         let outcome = ini::parse(&ini::serialize(&settings));
         assert_eq!(outcome.settings, settings);
         assert!(outcome.warnings.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+
+    #[test]
+    fn normal_binary_uses_its_parent_directory() {
+        let executable = Path::new("/opt/hunk-converter/hunk-converter");
+        assert_eq!(
+            portable_root_from(executable),
+            PathBuf::from("/opt/hunk-converter")
+        );
+    }
+
+    #[test]
+    fn macos_bundle_uses_the_folder_that_contains_the_app() {
+        let executable = Path::new(
+            "/Users/ana/Downloads/hunk-converter-1.0.0/HUNK Converter.app/Contents/MacOS/hunk-converter",
+        );
+        assert_eq!(
+            portable_root_from(executable),
+            PathBuf::from("/Users/ana/Downloads/hunk-converter-1.0.0")
+        );
     }
 }

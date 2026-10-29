@@ -1,6 +1,6 @@
 [package]
 name = "hunk-converter"
-version = "0.2.0"
+version = "1.0.0"
 edition = "2024"
 description = "Editor y conversor de imágenes local con Rust y egui"
 license = "MIT"
@@ -52,3 +52,6 @@ opt-level = 1
 
 [profile.dev.package."*"]
 opt-level = 2
+
+[build-dependencies]
+winresource = "0.1"

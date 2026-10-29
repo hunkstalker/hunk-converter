@@ -7,7 +7,7 @@ fn main() {
     let path = args
         .next()
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("/tmp/hunk-converter-demo.png"));
+        .unwrap_or_else(|| std::env::temp_dir().join("hunk-converter-demo.png"));
     let width = args
         .next()
         .and_then(|value| value.parse().ok())

@@ -1,10 +1,10 @@
-# Arquitectura de Hunk Converter
+# Arquitectura de HUNK Converter
 
-> Estado: aceptada · Fecha: 2026-10-29 · Versión: 0.2.0
+> Estado: aceptada · Fecha: 2026-10-29 · Versión: 1.0.0
 
 ## 1. Contexto
 
-Hunk Converter es una aplicación de escritorio terminada: convierte, comprime,
+HUNK Converter es una aplicación de escritorio terminada: convierte, comprime,
 compara y muestrea imágenes. Tiene unos 4.300 líneas de Rust, seis formatos de
 salida y no se espera que crezca de forma significativa.
 
@@ -218,12 +218,13 @@ La suite cubre:
 - política de formatos;
 - nombres de exportación y no sobrescritura;
 - códecs WebP/JPG/PNG/AVIF/JPEG XL;
+- orientación EXIF 1, 3, 6 y 8;
 - transparencia PNG/JPEG XL y aplanado JPG;
 - rasterización SVG;
 - estructura ICO;
 - códigos de color.
 
-Estado actual: **23 pruebas**, `cargo fmt --check` y
+Estado actual: **29 pruebas**, `cargo fmt --check` y
 `cargo clippy --all-targets -- -D warnings` limpios.
 
 ## 7. Decisiones deliberadamente descartadas

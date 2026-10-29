@@ -115,12 +115,12 @@
 **Completada:** 2026-10-29
 **Resultado:** Historial de 21 colores en tres filas, con candado visible, anillo de selección, papelera para limpiar no fijados y avisos de historial lleno. Verificado con muestreo real, bloqueo, selección y persistencia en config.ini.
 
-## t-28 — Marca Hunk Converter e icono de máscara de gas
+## t-28 — Marca HUNK Converter e icono de máscara de gas
 
-**Descripción:** Cambiar el nombre visible a Hunk Converter, el subtítulo a IMAGE TOOLBOX, actualizar el pie de versión y crear un icono original de máscara de gas.
+**Descripción:** Cambiar el nombre visible a HUNK Converter, el subtítulo a IMAGE TOOLBOX, actualizar el pie de versión y crear un icono original de máscara de gas.
 
 **Completada:** 2026-10-29
-**Resultado:** Cabecera «Hunk Converter / IMAGE TOOLBOX», pie «Rust + egui · Open Source · v0.2.0», icono SVG original de máscara de gas rasterizado a PNG y usado en la ventana y la cabecera.
+**Resultado:** Cabecera «HUNK Converter / IMAGE TOOLBOX», pie «Rust + egui · Open Source · v0.2.0», icono SVG original de máscara de gas rasterizado a PNG y usado en la ventana y la cabecera.
 
 ## t-29 — Ventana maximizada persistente
 
@@ -142,3 +142,34 @@
 
 **Completada:** 2026-10-29
 **Resultado:** `app.rs` pasa de más de 2.300 líneas a un shell de ~340 líneas y componentes en `app/ui/`. La lógica de formatos, color, historial, nombres de exportación y errores vive en `domain/`. Los códecs se separan en `codec/` y la configuración en `settings/`. La UI devuelve `AppAction` para workers, disco, portapapeles y configuración. Los bloqueos del historial se guardan con `colorN=#RRGGBBAA|1` y cuentan con pruebas de ida y vuelta. Documentado en `docs/arquitectura.md`.
+
+## t-32 — CI multiplataforma y release 1.0.0
+
+**Descripción:** Preparar GitHub Actions para compilar Linux Debian x86_64, Windows 10/11 x86_64 y macOS universal, publicar los artefactos con checksums al empujar un tag y dejar la versión 1.0.0 lista para su release.
+
+**Completada:** 2026-10-29
+**Resultado:** `release.yml` ejecuta pruebas, compila las tres plataformas, genera `SHA256SUMS.txt` y crea la GitHub Release en tags `*.*.*` o `v*.*.*`. `build_dist.sh` incorpora el preset macOS universal. Versión, documentación y capturas actualizadas a 1.0.0. Tag local `v1.0.0` preparado sobre el commit final.
+
+## t-33 — Iconos nativos de plataforma
+
+**Descripción:** Integrar el icono de HUNK Converter en el ejecutable de Windows, en el paquete `.app` de macOS y en el lanzador de Linux, además del icono de ventana existente.
+
+**Completada:** 2026-10-29
+**Resultado:** `winresource` incrusta `icon.ico` en el `.exe` MSVC. `make_icons` genera `icon_256.png`, `icon.ico` e `icon.icns`; `build_dist.sh macos` empaqueta `HUNK Converter.app` con `Info.plist` e icono. La build Linux incluye `hunk-converter.desktop` y `hunk-converter.png`. El icono de ventana sigue cargándose en tiempo de ejecución.
+
+## t-10 — Respetar la orientación EXIF
+
+**Descripción:** Leer la etiqueta `Orientation` de las imágenes JPEG/WebP que la incluyan y aplicar la rotación o el volteo correspondiente antes de mostrar, comparar, muestrear y exportar. Añadir pruebas con imágenes de orientación 1, 3, 6 y 8 para evitar fotos de móvil giradas.
+
+**Completada:** 2026-10-29
+**Resultado:** `codec::decode_raster` lee la orientación con `ImageDecoder::orientation` y la aplica con `DynamicImage::apply_orientation` antes de generar el RGBA. Las dimensiones se validan después del giro, por lo que los formatos de 90° y 270° intercambian ancho y alto correctamente. Pruebas de integración con JPEG y EXIF para orientaciones 1, 3, 6 y 8. La salida sigue sin conservar metadatos, pero los píxeles ya salen orientados.
+
+## Tareas descartadas o absorbidas
+
+### t-17 — Firma y notarización de macOS (descartada)
+
+**Motivo:** no hay presupuesto para certificado y notarización. La build universal `arm64 + x86_64` se distribuye como `HUNK Converter.app` sin firmar, y así queda documentado.
+
+### t-24 — Verificación visual del icono Windows (absorbida por t-23)
+
+**Motivo:** el icono ya se incrusta en la build MSVC y la comprobación visual forma parte de la validación completa de Windows de `t-23`. No se mantiene como tarea independiente.

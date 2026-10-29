@@ -4,11 +4,12 @@
 
 ## Marca e icono
 
-- Nombre visible: **Hunk Converter**.
+- Nombre visible: **HUNK Converter**.
 - Subtítulo: **IMAGE TOOLBOX**.
 - Pie: `Rust + egui · Open Source · v0.2.0`; la versión sale de `CARGO_PKG_VERSION`.
-- Nuevo icono original de máscara de gas en `assets/branding/icon.svg`,
-  rasterizado a `icon_256.png` con `src/bin/make_icon.rs`.
+- Nuevo icono original de máscara de gas. En 1.0.0 se sustituyó por
+  `assets/branding/hunk-converter.png`, con `src/bin/make_icons.rs` generando
+  `icon_256.png`, `icon.ico` e `icon.icns`.
 - El icono se usa en la ventana y en la cabecera.
 
 ## Idiomas y configuración
