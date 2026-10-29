@@ -31,7 +31,7 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Reinicio, atajos y avisos de error.
 - **Render bajo demanda:** sin repintado de UI cuando la ventana está quieta.
 - Builds portables de Linux y Windows; assets y fuente embebidos.
-- **8 pruebas Rust**, clippy y formato limpios.
+- **9 pruebas Rust**, clippy y formato limpios.
 - CI de Rust en GitHub Actions.
 - Benchmark comparativo completo en `docs/benchmark-2026-10-28.md`.
 
@@ -69,7 +69,8 @@ Builds portables:
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
 - **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
 - **Vista previa fiel:** decodificar el buffer final, no estimar.
-- **Cuentagotas:** icono de pipeta; un clic activa o desactiva el modo y también se puede arrastrar desde el icono hasta la imagen; muestrea el píxel original; no mueve el divisor; se cancela con `Esc`; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
+- **Cuentagotas:** icono de pipeta; un clic activa o desactiva el modo y también se puede arrastrar desde el icono hasta la imagen; muestrea el píxel original; no mueve el divisor; la marca solo se ve mientras está activo; se cancela con `Esc`; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
+- **Comparador:** el cursor de redimensionado solo aparece sobre la línea o el círculo del divisor.
 - **JPG:** transparencia compuesta sobre blanco.
 - **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
 - **Calidad inicial:** 82 %.

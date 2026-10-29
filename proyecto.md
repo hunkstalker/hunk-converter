@@ -58,7 +58,8 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 ### 3.3 Comparador y vista previa
 
 - Vista dividida entre **Original** y **Resultado**.
-- Divisor arrastrable con ratón; respuesta a `←`/`→`, `Inicio` y `Fin`.
+- Divisor arrastrable con ratón; el cursor de redimensionado solo aparece sobre la línea o el círculo.
+- Respuesta a `←`/`→`, `Inicio` y `Fin`.
 - La imagen resultante se obtiene decodificando el archivo codificado real.
 - Damero para transparencia.
 - Modo ICO: se oculta el divisor y se muestra el icono generado, con recuento de tamaños.
@@ -72,7 +73,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - También se puede pulsar el icono y arrastrar hasta el píxel: se muestrea mientras se arrastra y se conserva el último color al soltar.
 - `Esc` desactiva el modo sin alterar la muestra.
 - Se muestran las coordenadas del píxel muestreado.
-- Se dibuja una marca visual sobre la imagen.
+- La marca visual de muestreo solo se dibuja mientras el cuentagotas está activo.
 - Códigos simultáneos: **HEX, RGB, RGBA y HSL**, cada uno con botón de copia.
 - El muestreo no mueve el divisor del comparador.
 - En modo ICO se desactiva, porque la vista no representa la imagen original.
@@ -265,7 +266,7 @@ Resumen del contexto de referencia:
 
 ## 9. Pruebas y verificación
 
-- **8 pruebas Rust**: codificación, calidad, transparencia, aplanado JPG, ICO, códigos de color y carga SVG.
+- **9 pruebas Rust**: codificación, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
 - CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.

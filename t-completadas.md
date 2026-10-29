@@ -71,7 +71,7 @@
 **Descripción:** Añadir un cuentagotas que permita seleccionar píxeles de la imagen cargada desde la vista previa y mostrar sus códigos HEX, RGB, RGBA y HSL, con copia al portapapeles. El modo debe poder activarse y desactivarse, indicar las coordenadas del píxel, dibujar una marca de muestreo y desactivarse cuando no tenga sentido (vista ICO).
 
 **Completada:** 2026-10-28
-**Resultado:** Cuentagotas implementado en el panel inferior de la versión Rust con un icono dedicado. Se activa con un clic o arrastrando desde el icono hasta la imagen, muestrea el píxel original, conserva la posición del divisor, muestra coordenadas y los cuatro códigos con copia, y se desactiva en la vista ICO. También se cancela con `Esc`. Verificado con interacción real bajo Xvfb.
+**Resultado:** Cuentagotas implementado en el panel inferior de la versión Rust con un icono dedicado. Se activa con un clic o arrastrando desde el icono hasta la imagen, muestrea el píxel original, conserva la posición del divisor, muestra coordenadas y los cuatro códigos con copia, dibuja la marca solo mientras está activo y se desactiva en la vista ICO. También se cancela con `Esc`. Verificado con interacción real bajo Xvfb.
 
 ## t-20 — Prueba de concepto Rust + egui
 
@@ -85,4 +85,4 @@
 **Descripción:** Convertir el piloto en la aplicación principal, completar la paridad imprescindible del producto, reemplazar el selector de color de fondo por el cuentagotas, añadir soporte SVG, renombrar la aplicación a hunk-converter 0.2.0, empaquetar Linux y Windows, actualizar documentación y archivar el prototipo Godot.
 
 **Completada:** 2026-10-28
-**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 8 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.
+**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 9 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.

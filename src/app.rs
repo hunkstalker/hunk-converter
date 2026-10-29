@@ -1065,7 +1065,11 @@ impl HunkApp {
                 self.split =
                     ((position.x - image_rect.left()) / image_rect.width()).clamp(0.015, 0.985);
             }
-            if response.hovered() {
+            let split_x = image_rect.left() + image_rect.width() * self.split;
+            let over_handle = ctx
+                .input(|input| input.pointer.hover_pos())
+                .is_some_and(|position| pointer_over_split(image_rect, split_x, position));
+            if response.hovered() && over_handle {
                 ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
             }
         }
@@ -1128,8 +1132,9 @@ impl HunkApp {
             );
         }
 
-        if let (Some(rgba), Some((sample_x, sample_y))) =
-            (self.sampled_color, self.sampled_position)
+        if self.eyedropper_active
+            && let (Some(rgba), Some((sample_x, sample_y))) =
+                (self.sampled_color, self.sampled_position)
         {
             let ratio_x = sample_x as f32 / source_width.saturating_sub(1).max(1) as f32;
             let ratio_y = sample_y as f32 / source_height.saturating_sub(1).max(1) as f32;
@@ -1515,6 +1520,14 @@ fn paint_eyedropper(painter: &egui::Painter, rect: Rect, color: Color32) {
     ));
 }
 
+fn pointer_over_split(image_rect: Rect, split_x: f32, pointer: egui::Pos2) -> bool {
+    let over_line = (pointer.x - split_x).abs() <= 10.0
+        && pointer.y >= image_rect.top()
+        && pointer.y <= image_rect.bottom();
+    let over_circle = pointer.distance(pos2(split_x, image_rect.center().y)) <= 20.0;
+    over_line || over_circle
+}
+
 fn format_card(
     ui: &mut egui::Ui,
     format: OutputFormat,
@@ -1682,5 +1695,21 @@ fn safe_stem(value: &str) -> String {
         "imagen".to_owned()
     } else {
         clean
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_cursor_is_limited_to_the_line_and_handle() {
+        let image = Rect::from_min_max(pos2(0.0, 0.0), pos2(200.0, 100.0));
+        assert!(pointer_over_split(image, 100.0, pos2(100.0, 10.0)));
+        assert!(pointer_over_split(image, 100.0, pos2(108.0, 10.0)));
+        assert!(pointer_over_split(image, 100.0, pos2(118.0, 50.0)));
+        assert!(!pointer_over_split(image, 100.0, pos2(121.0, 50.0)));
+        assert!(!pointer_over_split(image, 100.0, pos2(100.0, -1.0)));
+        assert!(!pointer_over_split(image, 100.0, pos2(70.0, 50.0)));
     }
 }

@@ -36,7 +36,7 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 3. Haz clic sobre la imagen o arrastra desde el icono hasta el píxel que quieras.
 4. Copia cualquiera de sus códigos de color.
 
-El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo con `Esc`.
+El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo con `Esc`. La marca de muestreo solo se muestra mientras el cuentagotas está activo.
 
 La muestra se toma del píxel original, no del resultado recompimido, y conserva el canal alfa. En la vista ICO el cuentagotas se desactiva porque esa vista representa el icono generado, no la imagen de origen.
 
@@ -135,7 +135,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-La suite cubre codificación WebP/JPG/PNG, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color y rasterización SVG. También se ejecuta en GitHub Actions.
+La suite cubre codificación WebP/JPG/PNG, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
 
 ## Rendimiento
 
