@@ -1,67 +1,61 @@
-# hunk-converter — PoC Rust/egui
+# hunk-converter
 
-Prueba de concepto **independiente** del prototipo Godot. Su objetivo es medir si
-Rust + egui permite conservar la experiencia y reducir de forma clara el consumo
-de recursos antes de decidir una migración.
+**Convierte, comprime, compara, muestrea colores y exporta imágenes sin salir de tu equipo.**
 
-![Vista de la PoC](docs/hunk-converter-rust-poc.png)
+hunk-converter es una aplicación de escritorio local-first escrita en **Rust + egui**. Arrastra una imagen, elige el formato de salida, ajusta la calidad y comprueba el resultado real con un comparador deslizante antes de guardarlo. También genera iconos `.ico` multirresolución.
 
-## Qué valida
+La interfaz solo repinta cuando hay actividad. No mantiene un bucle de render continuo mientras miras una imagen estática.
 
-- Ventana nativa con egui/eframe y renderizador OpenGL (glow).
-- Arrastrar y soltar imágenes sobre la ventana.
-- Carga de PNG, JPG, WebP, BMP y TGA.
-- Codificación WebP, JPG, PNG e ICO multirresolución.
-- Comparador deslizante antes/después con damero para transparencia.
-- Procesamiento de imagen fuera del hilo de interfaz.
-- Selector de color de fondo con códigos **HEX, RGB, RGBA y HSL** y copia al
-  portapapeles. Se aplica al aplanar transparencias en JPG.
-- Exportación directa a `export/`, junto al ejecutable, con nombres únicos.
-- Atajos: `Ctrl+O`, `Ctrl+E` y `Ctrl+R`.
+Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexión a internet.
 
-## Medidas de la prueba
+![Editor de hunk-converter](docs/hunk-converter-editor.png)
 
-Entorno: Debian 12, Rust 1.99.1, egui/eframe 0.37 y Godot 4.7.2,
-renderizado por software con llvmpipe bajo Xvfb. Imagen sintética de
-**4000 × 3000 px** (12 MP). Son cifras orientativas; el detalle y las condiciones
-están en el [informe completo](docs/benchmark-2026-10-28.md).
+## Características
 
-| Métrica | Godot 0.1.0 | PoC Rust/egui | Diferencia |
-| --- | ---: | ---: | ---: |
-| Arranque a ventana (mediana) | 239,8 ms | 173,1 ms | **−27,8 %** |
-| Binario Linux | 70,7 MiB | 7,5 MiB | **−89,4 %** |
-| Ejecutable Windows | 104,7 MiB | 6,4 MiB | **−93,9 %** |
-| RAM en reposo (RSS) | 209,7 MiB | 100,9 MiB | **−51,9 %** |
-| RAM con imagen 12 MP | 316,9 MiB | 211,3 MiB | **−33,3 %** |
-| Pico con GUI e imagen 12 MP | 447,5 MiB | 336,3 MiB | **−24,8 %** |
-| WebP q82, 12 MP | 1121,0 ms / 88,9 KB | 743,9 ms / 78,7 KB | **−33,6 %** |
-| JPG q82, 12 MP | 1137,0 ms / 604,7 KB | 380,8 ms / 700,9 KB | **−66,5 %** |
-| PNG, 12 MP | 4723,4 ms / 12,24 MB | 3225,0 ms / 12,36 MB | **−31,7 %** |
-| ICO 16–256, 12 MP | 723,9 ms / 43,2 KB | 448,8 ms / 43,1 KB | **−38,0 %** |
-| CPU en reposo, 60 FPS software | ≈1130 % | **0 %** | actividad continua vs. bajo demanda |
+- **Arrastrar y soltar** en cualquier parte de la ventana, o selector nativo con `Ctrl+O`.
+- **Entrada:** PNG, JPG/JPEG, WebP, BMP, TGA y SVG.
+- **Salida:** WebP, JPG, PNG e ICO.
+- **Calidad ajustable** de 1 a 100 para WebP y JPG (82 % por defecto).
+- **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
+- **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
+- **Cuentagotas:** activa el modo y haz clic sobre la imagen para capturar un color.
+- **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
+- **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
+- **PNG sin pérdida** y transparencia conservada en WebP/PNG/ICO.
+- **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
+- **Guardado directo** en `export/`, junto al ejecutable, sin sobrescribir archivos.
+- **Reinicio completo** con `Ctrl+R`.
+- **Portable:** builds de Linux y Windows, sin instalador.
+- **Local y privado:** cero llamadas de red.
+- **Render bajo demanda:** sin CPU de UI en reposo.
 
-La RAM en reposo se midió con las dos aplicaciones abiertas y sin imagen; la
-cargada, con una imagen de 4000 × 3000. En ambos casos se usó el mismo servidor
-Xvfb y llvmpipe, por lo que el consumo absoluto es mayor que con una GPU real.
-La CPU se mide por proceso (100 % = un núcleo); el valor de Godot está inflado
-por el renderizado software sin VSync y no debe extrapolarse a vatios reales.
+## Cuentagotas
 
-Conclusiones provisionales:
+1. Carga una imagen.
+2. Pulsa **Activar** en la tarjeta del cuentagotas.
+3. Haz clic o arrastra sobre la imagen.
+4. Copia cualquiera de sus códigos de color.
 
-- La mejora de tiempo en códecs va del 32 % al 66 % en 12 MP, pero no es un
-  orden de magnitud: libwebp ya es nativo en ambos casos.
-- La diferencia estructural está en **tamaño del ejecutable, arranque y memoria**.
-- egui cubre sin problemas este tipo de interfaz: lienzo propio, arrastre, slider,
-  drag & drop, selector de color y paneles.
-- La migración solo tiene sentido si esos objetivos de huella son prioritarios.
-  Si el objetivo principal fuera únicamente convertir más rápido, habría que
-  optimizar códecs y paralelismo antes que cambiar de toolkit.
+La muestra se toma del píxel original, no del resultado recompimido, y conserva el canal alfa. En la vista ICO el cuentagotas se desactiva porque esa vista representa el icono generado, no la imagen de origen.
 
-## Ejecutar
+![Cuentagotas de hunk-converter](docs/hunk-converter-cuentagotas.png)
 
-Requisitos: Rust 1.99.1 (fijado en `rust-toolchain.toml`), un compilador de C para `libwebp-sys` y, en
-Linux, las bibliotecas gráficas de X11/Wayland habituales. En Windows hace falta
-MSVC Build Tools o un toolchain GNU.
+## Capturas
+
+| Inicio | Vista ICO |
+| --- | --- |
+| ![Pantalla de inicio](docs/hunk-converter-inicio.png) | ![Vista de icono](docs/hunk-converter-ico.png) |
+
+Las capturas usan imágenes de muestra generadas por el propio proyecto.
+
+## Ejecutar desde el código
+
+Requisitos:
+
+- **Rust 1.99.1** (fijado en `rust-toolchain.toml`).
+- Un compilador de C para `libwebp-sys`.
+- En Linux, las bibliotecas gráficas habituales de X11/OpenGL.
+- En Windows, MSVC Build Tools o un toolchain GNU.
 
 ```bash
 cargo run --release -- /ruta/a/imagen.jpg
@@ -69,82 +63,53 @@ cargo run --release -- /ruta/a/imagen.jpg
 cargo run --release
 ```
 
-Para generar las capturas de documentación:
+## Uso
 
-```bash
-HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
-  cargo run --release
-```
+1. Arrastra una imagen a la ventana o pulsa **Seleccionar una imagen**.
+2. Elige **WebP**, **JPG**, **PNG** o **ICO**.
+3. Ajusta la calidad o los tamaños del icono.
+4. Arrastra el divisor del comparador para revisar el resultado.
+5. Activa el cuentagotas si necesitas extraer colores.
+6. Pulsa **Exportar** o `Ctrl+E`.
 
-Para probar la vista ICO:
+El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se añade `-2`, `-3`, etc.
 
-```bash
-HUNK_POC_DEMO=1 HUNK_POC_FORMAT=ico \
-  HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc-ico.png \
-  cargo run --release
-```
+### Atajos
 
-## Benchmark
+| Atajo | Acción |
+| --- | --- |
+| `Ctrl+O` | Abrir imagen |
+| `Ctrl+E` | Exportar |
+| `Ctrl+R` | Reiniciar la aplicación |
+| `←` / `→` | Mover el divisor del comparador |
+| `Inicio` / `Fin` | Llevar el divisor a un extremo |
 
-```bash
-cargo run --release --bin make_demo -- /tmp/muestra.png 4000 3000
-cargo run --release --bin bench -- /tmp/muestra.png
-```
+## Formatos
 
-El benchmark imprime el tiempo de cada formato, el tamaño resultante y el pico
-de memoria (`VmHWM`) del proceso.
+| Formato | Entrada | Salida | Transparencia | Calidad |
+| --- | :---: | :---: | :---: | :---: |
+| PNG | ✓ | ✓ | Sí | Sin pérdida |
+| JPG / JPEG | ✓ | ✓ | No (fondo blanco) | 1–100 |
+| WebP | ✓ | ✓ | Sí | 1–100 |
+| BMP | ✓ | — | Según archivo | — |
+| TGA | ✓ | — | Según archivo | — |
+| SVG | ✓ | — | Rasterizado | — |
+| ICO | — | ✓ | Sí | Tamaños fijos |
 
-## Pruebas
-
-```bash
-cargo test
-```
-
-Cubre codificación de los cuatro formatos, calidad frente a tamaño,
-transparencia PNG, aplanado JPG, estructura y frames ICO, y conversiones de
-color.
-
-## Limitaciones del piloto
-
-- No incluye SVG.
-- No respeta orientación EXIF.
-- No conserva metadatos ni perfiles ICC.
-- No incluye AVIF, HEIC ni JPEG XL; están registrados en `../Prototipo/todo.md`.
-- No tiene accesibilidad nativa completa.
-- La lectura de la imagen inicial ocurre en el hilo de interfaz.
-- La ventana mínima es 1024 × 800.
-- Aún no hay build Windows de esta PoC ni empaquetado final.
-- El tema y la composición buscan validar la viabilidad, no copiar píxel a píxel
-  el prototipo Godot.
-
-El prototipo Godot sigue siendo la versión de referencia hasta que se decida la
-migración definitiva.
-
-## Documentación y contexto
-
-- `retomar.md`: estado y comandos para retomar el piloto.
-- `docs/benchmark-2026-10-28.md`: informe completo de rendimiento, memoria, arranque y empaquetado.
-- `notes/`: evidencia fechada de la sesión.
-- `../Prototipo/`: prototipo Godot de referencia y documentación del producto.
-
-## Licencia
-
-Código bajo [MIT](LICENSE). La tipografía Manrope se distribuye bajo la SIL Open
-Font License 1.1; su licencia está incluida en
-[assets/fonts/OFL.txt](assets/fonts/OFL.txt).
+Los SVG se rasterizan con `resvg` al tamaño declarado. El límite de entrada es de 200 MB y 40 megapíxeles (máximo 16 384 px por lado).
 
 ## Builds portables
 
-En `dist/` se generan carpetas autocontenidas con el ejecutable, `export/`,
-licencias y `LEEME.txt`:
+Cada build es una carpeta autocontenida. La salida queda en `export/`, junto al ejecutable.
 
 ```text
-hunk-converter-piloto-0.1.0-windows-x86_64/
-├── hunk-converter-piloto.exe
+hunk-converter-0.2.0-windows-x86_64/
+├── hunk-converter.exe
 ├── export/
 ├── LEEME.txt
 ├── LICENSE.txt
-└── LICENCIAS/Manrope-OFL.txt
+└── LICENCIAS/
+    └── Manrope-OFL.txt
 ```
 
 ```bash
@@ -153,10 +118,60 @@ hunk-converter-piloto-0.1.0-windows-x86_64/
 ./scripts/build_dist.sh all
 ```
 
-- Linux: binario nativo. La build de esta sesión está en
-  `dist/hunk-converter-piloto-0.1.0-linux-x86_64.tar.gz`.
-- Windows: por defecto compila para `x86_64-pc-windows-gnu`. Requiere el target
-  de Rust y un toolchain de enlazado adecuado. La build de esta sesión está en
-  `dist/hunk-converter-piloto-0.1.0-windows-x86_64.zip`.
-- La build Linux se ejecutó y exportó correctamente junto a su binario. La build
-  Windows se generó, pero no se ejecutó en un Windows real en esta sesión.
+Los resultados se generan en `dist/`:
+
+- Linux: carpeta y `.tar.gz`.
+- Windows: carpeta y `.zip` si `zip` está instalado.
+
+La build Windows se ha generado, pero todavía no se ha ejecutado en un Windows real. La build Linux se validó bajo X11, incluyendo la exportación a su carpeta `export/`.
+
+## Pruebas
+
+```bash
+cargo test
+cargo clippy --all-targets -- -D warnings
+cargo fmt --all -- --check
+```
+
+La suite cubre codificación WebP/JPG/PNG, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color y rasterización SVG. También se ejecuta en GitHub Actions.
+
+## Rendimiento
+
+La versión Rust/egui se comparó con el prototipo Godot antes de migrar. En el mismo entorno Linux y con la misma imagen, el binario, la memoria, el arranque y los tiempos de codificación son claramente menores. El informe completo, la metodología y las limitaciones están en:
+
+[`docs/benchmark-2026-10-28.md`](docs/benchmark-2026-10-28.md)
+
+## Estructura
+
+```text
+.
+├── assets/                 Iconos, tipografía y licencias
+├── docs/                   Capturas e informe de benchmark
+├── notes/                  Evidencia fechada de las sesiones
+├── scripts/build_dist.sh   Empaquetado portable
+├── src/
+│   ├── app.rs              Interfaz, estado, cuentagotas y exportación
+│   ├── core/               Códecs, ICO y conversión de color
+│   ├── bin/                Benchmark y generador de muestra
+│   ├── demo.rs             Imagen sintética para capturas
+│   └── theme.rs            Tema visual
+├── proyecto.md             Documento vivo
+├── todo.md                 Tareas pendientes
+├── t-completadas.md        Tareas cerradas
+└── retomar.md              Punto de entrada para nuevas sesiones
+```
+
+## Documentación
+
+- [proyecto.md](proyecto.md) — producto, funcionalidad y arquitectura.
+- [todo.md](todo.md) — tareas pendientes.
+- [t-completadas.md](t-completadas.md) — tareas cerradas.
+- [retomar.md](retomar.md) — estado y contexto para continuar.
+- [notes/](notes/) — evidencia fechada.
+- [docs/benchmark-2026-10-28.md](docs/benchmark-2026-10-28.md) — benchmark comparativo.
+
+El prototipo Godot original se conserva como archivo histórico en `../Prototipo`.
+
+## Licencia
+
+Código bajo [MIT](LICENSE). La tipografía Manrope se distribuye bajo la SIL Open Font License 1.1; su licencia está incluida en [assets/fonts/OFL.txt](assets/fonts/OFL.txt).

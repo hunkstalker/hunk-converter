@@ -1,58 +1,58 @@
-# Retomar Piloto Rust/egui
+# Retomar hunk-converter
 
-> Repositorio piloto independiente de **hunk-converter**. Última actualización: 2026-10-28.
+> Punto de entrada para nuevas sesiones. Última actualización: **2026-10-29**.
+> Versión: **0.2.0** · Rama: **main** · Estado: **aplicación principal Rust + egui, portable**.
 
-## Estado
+## 1. Qué es este proyecto
 
-- Ventana nativa con egui/eframe + glow.
-- Carga PNG/JPG/WebP/BMP/TGA por arrastre o argumento.
-- Salida WebP/JPG/PNG/ICO.
-- Comparador, procesamiento en hilo aparte y exportación portable a `export/`.
-- Selector de color de fondo con HEX/RGB/RGBA/HSL y copia al portapapeles.
-- 7 pruebas Rust, clippy y rustfmt limpios.
-- Capturas en `docs/`.
+**hunk-converter** es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. Está hecha en **Rust + egui**, usa el renderizador **glow** y no requiere instalador.
 
-## Comandos
+Puede exportar WebP, JPG, PNG e ICO. La vista previa compara el original con el archivo codificado real. Incluye un cuentagotas que obtiene colores de la imagen y muestra sus códigos HEX/RGB/RGBA/HSL. Los resultados se guardan en `export/`, junto al ejecutable.
+
+Ruta principal:
+
+```text
+/workspace/hunk-converter/
+```
+
+El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se debe seguir desarrollando allí.
+
+## 2. Estado actual
+
+- Interfaz completa en español y tema oscuro propio.
+- Carga por arrastre, selector nativo o argumento de línea de comandos.
+- Entrada: PNG, JPG, WebP, BMP, TGA y SVG.
+- Salida: WebP, JPG, PNG e ICO.
+- Calidad 1–100 para WebP/JPG; PNG sin pérdida; JPG aplanado sobre blanco.
+- Comparador visual con divisor, damero y modo ICO.
+- Cuentagotas con muestra del píxel original, coordenadas y códigos HEX/RGB/RGBA/HSL; copia al portapapeles.
+- Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
+- Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
+- Reinicio, atajos y avisos de error.
+- **Render bajo demanda:** sin repintado de UI cuando la ventana está quieta.
+- Builds portables de Linux y Windows; assets y fuente embebidos.
+- **8 pruebas Rust**, clippy y formato limpios.
+- CI de Rust en GitHub Actions.
+- Benchmark comparativo completo en `docs/benchmark-2026-10-28.md`.
+
+## 3. Comandos
 
 ```bash
 cargo run --release -- /ruta/a/imagen.jpg
+cargo run --release
+
 cargo test
 cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 
-# Demostración y capturas
+# Demo y capturas
 cargo run --release --bin make_demo -- /tmp/muestra.png 4000 3000
 cargo run --release --bin bench -- /tmp/muestra.png
-HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
+HUNK_DEMO=1 HUNK_SCREENSHOT=docs/hunk-converter-editor.png \
   cargo run --release
 ```
 
-## Medidas recientes
-
-- Arranque a ventana: 173,1 ms frente a 239,8 ms de Godot.
-- RAM en reposo: 100,9 MiB frente a 209,7 MiB.
-- RAM con imagen 12 MP: 211,3 MiB frente a 316,9 MiB.
-- WebP q82 12 MP: 743,9 ms frente a 1121 ms.
-- JPG q82 12 MP: 380,8 ms frente a 1137 ms.
-- Informe completo: `docs/benchmark-2026-10-28.md`.
-
-## Decisiones y límites
-
-- Se mantiene separado del prototipo Godot en `../Prototipo/`.
-- La app principal sigue siendo la versión de referencia hasta decidir la migración.
-- No incluye SVG, EXIF, accesibilidad completa, AVIF, HEIC ni JPEG XL.
-- La ventana mínima es 1024 × 800.
-- La exportación se escribe junto al ejecutable (`target/release/export/` en desarrollo).
-- La build Windows se generó por compilación cruzada, pero no se ejecutó en un Windows real.
-
-## Documentos
-
-- `README.md`: alcance, medidas comparativas y funcionamiento.
-- `docs/benchmark-2026-10-28.md`: mediciones completas de arranque, memoria, CPU, códecs y distribución.
-- `../Prototipo/todo.md`: tareas del producto principal.
-- `../Prototipo/retomar.md`: contexto del prototipo Godot.
-
-## Builds
+Builds portables:
 
 ```bash
 ./scripts/build_dist.sh linux
@@ -60,5 +60,79 @@ HUNK_POC_DEMO=1 HUNK_POC_SCREENSHOT=docs/hunk-converter-rust-poc.png \
 ./scripts/build_dist.sh all
 ```
 
-Los artefactos quedan en `dist/`. La build Linux fue validada; la Windows se
-generó por compilación cruzada y no se ejecutó en Windows en esta sesión.
+- Linux usa las bibliotecas gráficas del sistema (X11/OpenGL).
+- Windows se compila por defecto con `x86_64-pc-windows-gnu`; requiere target de Rust y toolchain/linker de Windows. El script genera zip si `zip` está disponible.
+- La build Windows se genera, pero no se ha ejecutado en un Windows real (`t-23`).
+
+## 4. Decisiones que no se deben romper
+
+- **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
+- **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
+- **Vista previa fiel:** decodificar el buffer final, no estimar.
+- **Cuentagotas:** muestrea el píxel original; no mueve el divisor; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
+- **JPG:** transparencia compuesta sobre blanco.
+- **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
+- **Calidad inicial:** 82 %.
+- **Reinicio:** restablece formato, calidad, tamaños y muestra de color.
+- **Privacidad:** sin red, cuentas ni telemetría.
+- **Render:** no añadir animaciones permanentes ni bucles de repintado innecesarios. Cualquier animación debe justificar sus frames.
+- **Tema:** todo el estilo vive en `src/theme.rs`; mantener la paleta y jerarquía.
+
+## 5. Estructura
+
+```text
+src/main.rs                  eframe, ventana e icono
+src/app.rs                   UI, estado, cuentagotas, hilos y exportación
+src/core/codec.rs            Carga/decodificación/codificación
+src/core/color.rs            Códigos de color y aplanado
+src/core/ico.rs              Contenedor ICO
+src/demo.rs                  Imagen sintética para demos/capturas
+src/theme.rs                 Tema egui
+src/bin/bench.rs             Benchmark de códecs
+src/bin/make_demo.rs         Generador de muestra
+scripts/build_dist.sh        Empaquetado portable
+assets/                      Manrope, iconos y licencias
+docs/                        Capturas e informe de benchmark
+notes/                       Evidencia fechada
+proyecto.md                 Documento de producto
+todo.md                     Tareas pendientes
+t-completadas.md            Tareas cerradas
+```
+
+## 6. Tareas
+
+- Pendientes: `todo.md` (t-10 a t-18, t-22 a t-24).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20 y t-21).
+- Evidencia: todas las notas de `notes/`, incluida la migración.
+- **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
+
+Siguiente tarea recomendada: **t-23 — validar la build Windows en un equipo real**, porque ya existe el ejecutable y es la principal incógnita de distribución. Después, t-10 (EXIF) y t-22 (accesibilidad).
+
+## 7. Benchmarks y límites
+
+El informe completo está en `docs/benchmark-2026-10-28.md`.
+
+- La versión Rust es mucho más pequeña que el prototipo Godot, arranca antes, usa menos RAM y es más rápida codificando.
+- La CPU en reposo del prototipo Godot medida bajo llvmpipe no representa un equipo con GPU, pero sí evidencia el repintado continuo.
+- La ventaja de velocidad no viene de paralelismo: los códecs principales trabajan en un solo núcleo.
+- No se midieron PSNR/SSIM.
+
+Pendientes conocidos:
+
+- EXIF y metadatos (`t-10`).
+- Redimensión, lotes y zoom (`t-11`, `t-12`, `t-16`).
+- AVIF/HEIC/JPEG XL (`t-15`).
+- Accesibilidad completa (`t-22`).
+- Validación Windows (`t-23`) e icono del ejecutable (`t-24`).
+- Build macOS (`t-17`).
+
+## 8. Flujo de trabajo para la próxima sesión
+
+1. Leer `retomar.md`, `proyecto.md` y `todo.md`.
+2. Revisar `git status`, `notes/` y `docs/benchmark-2026-10-28.md`.
+3. Ejecutar `cargo test` antes de tocar código.
+4. Implementar una tarea pendiente.
+5. Añadir pruebas y actualizar capturas si cambia la interfaz.
+6. Mover la tarea a `t-completadas.md` y actualizar proyecto/retomar.
+7. Crear una nota fechada en `notes/` con decisiones y verificación.
+8. Hacer commit con un mensaje claro.

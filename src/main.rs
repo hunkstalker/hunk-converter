@@ -1,11 +1,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use eframe::egui;
-use hunk_converter_poc::app::HunkApp;
+use hunk_converter::app::HunkApp;
 
 fn main() -> eframe::Result {
     let icon = window_icon();
-    let inner_size = std::env::var("HUNK_POC_SIZE")
+    let inner_size = std::env::var("HUNK_SIZE")
         .ok()
         .and_then(|value| {
             let (width, height) = value.split_once('x')?;
@@ -17,7 +17,7 @@ fn main() -> eframe::Result {
         .unwrap_or([1280.0, 800.0]);
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("hunk-converter · PoC Rust/egui")
+            .with_title("hunk-converter · imágenes listas para usar")
             .with_inner_size(inner_size)
             .with_min_inner_size([1024.0, 800.0])
             .with_icon(icon),

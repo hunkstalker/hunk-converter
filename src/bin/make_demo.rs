@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use hunk_converter_poc::demo;
+use hunk_converter::demo;
 
 fn main() {
     let mut args = std::env::args().skip(1);

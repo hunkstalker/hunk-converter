@@ -26,7 +26,9 @@ pub struct HunkApp {
     format: OutputFormat,
     quality: u8,
     ico_selected: [bool; 6],
-    background: Color32,
+    eyedropper_active: bool,
+    sampled_color: Option<[u8; 4]>,
+    sampled_position: Option<(u32, u32)>,
     split: f32,
     revision: u64,
     pending_since: Option<Instant>,
@@ -35,6 +37,7 @@ pub struct HunkApp {
     screenshot_path: Option<PathBuf>,
     screenshot_at: Option<Instant>,
     screenshot_requested: bool,
+    screenshot_delay: Duration,
 }
 
 struct Source {
@@ -79,8 +82,13 @@ impl HunkApp {
             "brand-icon",
             include_bytes!("../assets/branding/icon_256.png"),
         );
-        let screenshot_path = std::env::var_os("HUNK_POC_SCREENSHOT").map(PathBuf::from);
-        let demo_requested = std::env::var_os("HUNK_POC_DEMO").is_some();
+        let screenshot_path = std::env::var_os("HUNK_SCREENSHOT").map(PathBuf::from);
+        let screenshot_delay = std::env::var("HUNK_SCREENSHOT_DELAY_MS")
+            .ok()
+            .and_then(|value| value.parse::<u64>().ok())
+            .map(Duration::from_millis)
+            .unwrap_or(Duration::from_millis(350));
+        let demo_requested = std::env::var_os("HUNK_DEMO").is_some();
         let file_arg = std::env::args()
             .skip(1)
             .find(|argument| !argument.starts_with("--") && Path::new(argument).is_file());
@@ -92,7 +100,9 @@ impl HunkApp {
             format: OutputFormat::Webp,
             quality: 82,
             ico_selected: [true; 6],
-            background: Color32::WHITE,
+            eyedropper_active: false,
+            sampled_color: None,
+            sampled_position: None,
             split: 0.5,
             revision: 0,
             pending_since: None,
@@ -101,15 +111,16 @@ impl HunkApp {
             screenshot_path,
             screenshot_at: None,
             screenshot_requested: false,
+            screenshot_delay,
         };
 
-        if demo_requested || (app.screenshot_path.is_some() && file_arg.is_none()) {
+        if demo_requested {
             app.load_demo(&cc.egui_ctx);
         } else if let Some(path) = file_arg {
             app.load_path(Path::new(&path), &cc.egui_ctx);
         }
 
-        if let Ok(format) = std::env::var("HUNK_POC_FORMAT") {
+        if let Ok(format) = std::env::var("HUNK_FORMAT") {
             let format = match format.to_lowercase().as_str() {
                 "jpg" | "jpeg" => OutputFormat::Jpg,
                 "png" => OutputFormat::Png,
@@ -181,7 +192,7 @@ impl HunkApp {
             format: self.format,
             quality: self.quality,
             ico_sizes: self.selected_ico_sizes(),
-            background: self.background.to_array(),
+            background: [255, 255, 255, 255],
         };
         let (sender, receiver) = mpsc::channel();
         let thread_ctx = ctx.clone();
@@ -240,7 +251,7 @@ impl HunkApp {
     fn apply_output(&mut self, ctx: &egui::Context, output: EncodedOutput, elapsed: Duration) {
         let preview = upload_texture(ctx, &format!("result-{}", self.revision), &output.preview);
         let format = self.format;
-        if std::env::var_os("HUNK_POC_METRICS").is_some() {
+        if std::env::var_os("HUNK_METRICS").is_some() {
             eprintln!(
                 "[metrics] format={format:?} bytes={} encode_ms={:.1} preview={}x{}",
                 output.bytes.len(),
@@ -285,6 +296,9 @@ impl HunkApp {
             texture,
         });
         self.result = None;
+        self.eyedropper_active = false;
+        self.sampled_color = None;
+        self.sampled_position = None;
         self.split = 0.5;
         self.screenshot_at = None;
         self.screenshot_requested = false;
@@ -338,7 +352,10 @@ impl HunkApp {
 
     fn open_file_dialog(&mut self, ctx: &egui::Context) {
         if let Some(path) = rfd::FileDialog::new()
-            .add_filter("Imágenes", &["png", "jpg", "jpeg", "webp", "bmp", "tga"])
+            .add_filter(
+                "Imágenes",
+                &["png", "jpg", "jpeg", "webp", "bmp", "tga", "svg"],
+            )
             .pick_file()
         {
             self.load_path(&path, ctx);
@@ -351,8 +368,10 @@ impl HunkApp {
         self.format = OutputFormat::Webp;
         self.quality = 82;
         self.ico_selected = [true; 6];
-        self.background = Color32::WHITE;
         self.split = 0.5;
+        self.eyedropper_active = false;
+        self.sampled_color = None;
+        self.sampled_position = None;
         self.pending_since = None;
         self.revision = self.revision.wrapping_add(1);
         self.screenshot_at = None;
@@ -366,6 +385,9 @@ impl HunkApp {
             return;
         }
         self.format = format;
+        if format == OutputFormat::Ico {
+            self.eyedropper_active = false;
+        }
         self.result = None;
         self.request_encode(ctx, None);
     }
@@ -491,16 +513,12 @@ impl HunkApp {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("PoC Rust + egui · open source · sin conexión")
+                        RichText::new("Rust + egui · open source · sin conexión")
                             .size(9.5)
                             .color(T::TEXT_FAINT),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(
-                            RichText::new("v0.1.0-poc · MIT")
-                                .size(9.5)
-                                .color(T::TEXT_FAINT),
-                        );
+                        ui.label(RichText::new("v0.2.0 · MIT").size(9.5).color(T::TEXT_FAINT));
                     });
                 });
             });
@@ -721,25 +739,93 @@ impl HunkApp {
     }
 
     fn show_color_panel(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let mut requested_color = self.background;
+        let mut toggle_eyedropper = false;
         let mut copy_text: Option<String> = None;
+        let icon_mode = self.format == OutputFormat::Ico;
+        let sample = self.sampled_color;
+        let sampled_position = self.sampled_position;
 
         T::soft_frame().show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.spacing_mut().interact_size.y = 22.0;
             ui.horizontal(|ui| {
-                ui.label(T::eyebrow("COLOR DE FONDO"));
+                ui.label(T::eyebrow("CUENTAGOTAS"));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(RichText::new("Fondo JPG").size(9.0).color(T::TEXT_FAINT));
-                    if ui
-                        .color_edit_button_srgba(&mut requested_color)
-                        .on_hover_text("Fondo al aplanar transparencias al exportar JPG")
-                        .changed()
-                    {
-                        requested_color = Color32::from_rgb(
-                            requested_color.r(),
-                            requested_color.g(),
-                            requested_color.b(),
+                    let label = if self.eyedropper_active {
+                        "Activo"
+                    } else {
+                        "Activar"
+                    };
+                    let button = egui::Button::new(
+                        RichText::new(label)
+                            .size(9.5)
+                            .color(if self.eyedropper_active {
+                                T::ACCENT_INK
+                            } else {
+                                T::TEXT_MUTED
+                            })
+                            .strong(),
+                    )
+                    .selected(self.eyedropper_active)
+                    .fill(if self.eyedropper_active {
+                        T::ACCENT
+                    } else {
+                        T::SURFACE_3
+                    })
+                    .stroke(Stroke::new(
+                        1.0,
+                        if self.eyedropper_active {
+                            T::ACCENT
+                        } else {
+                            T::BORDER
+                        },
+                    ))
+                    .corner_radius(CornerRadius::same(8));
+                    let response = ui.add_enabled(!icon_mode, button);
+                    if icon_mode {
+                        response
+                            .on_hover_text("El cuentagotas está disponible en la vista de imagen.");
+                    } else if response.clicked() {
+                        toggle_eyedropper = true;
+                    }
+                });
+            });
+            ui.add_space(4.0);
+
+            ui.horizontal(|ui| {
+                let (rect, _) = ui.allocate_exact_size(vec2(36.0, 26.0), Sense::hover());
+                let painter = ui.painter();
+                paint_checker(painter, rect);
+                if let Some(rgba) = sample {
+                    painter.rect_filled(
+                        rect,
+                        CornerRadius::same(5),
+                        Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]),
+                    );
+                }
+                painter.rect_stroke(
+                    rect,
+                    CornerRadius::same(5),
+                    Stroke::new(1.0, T::BORDER_STRONG),
+                    StrokeKind::Inside,
+                );
+                ui.add_space(2.0);
+                ui.vertical(|ui| {
+                    let message = if icon_mode {
+                        "Cambia a WebP, JPG o PNG para muestrear."
+                    } else if self.eyedropper_active {
+                        "Haz clic sobre la imagen."
+                    } else if sample.is_some() {
+                        "Muestra capturada."
+                    } else {
+                        "Activa y haz clic sobre la imagen."
+                    };
+                    ui.label(RichText::new(message).size(9.5).color(T::TEXT_MUTED));
+                    if let Some((x, y)) = sampled_position {
+                        ui.label(
+                            RichText::new(format!("píxel {x} · {y}"))
+                                .font(FontId::monospace(8.5))
+                                .color(T::TEXT_FAINT),
                         );
                     }
                 });
@@ -749,8 +835,15 @@ impl HunkApp {
             ui.spacing_mut().interact_size.y = 16.0;
             ui.spacing_mut().item_spacing.y = 3.0;
             ui.spacing_mut().button_padding = vec2(4.0, 1.0);
-            let rgba = requested_color.to_array();
-            for (label, value) in color::color_codes(rgba) {
+            let codes = sample.map(color::color_codes).unwrap_or_else(|| {
+                [
+                    ("HEX", "—".to_owned()),
+                    ("RGB", "—".to_owned()),
+                    ("RGBA", "—".to_owned()),
+                    ("HSL", "—".to_owned()),
+                ]
+            });
+            for (label, value) in codes {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(label).size(9.0).color(T::TEXT_FAINT).strong());
                     ui.label(
@@ -763,7 +856,8 @@ impl HunkApp {
                             RichText::new("Copiar").size(9.0).color(T::TEXT_FAINT),
                         )
                         .frame(false);
-                        if ui.add(copy).clicked() {
+                        let response = ui.add_enabled(sample.is_some(), copy);
+                        if response.clicked() {
                             copy_text = Some(value.clone());
                         }
                     });
@@ -771,9 +865,9 @@ impl HunkApp {
             }
         });
 
-        if requested_color != self.background {
-            self.background = requested_color;
-            self.request_encode(ctx, Some(Duration::from_millis(ENCODE_DELAY_MS)));
+        if toggle_eyedropper {
+            self.eyedropper_active = !self.eyedropper_active;
+            ctx.request_repaint();
         }
         if let Some(text) = copy_text {
             ctx.copy_text(text);
@@ -852,6 +946,12 @@ impl HunkApp {
                         if self.busy() {
                             ui.add(egui::Spinner::new().size(12.0).color(T::ACCENT));
                             ui.label(RichText::new("Procesando…").size(9.5).color(T::TEXT_MUTED));
+                        } else if self.eyedropper_active {
+                            ui.label(
+                                RichText::new("Cuentagotas activo · haz clic en la imagen")
+                                    .size(9.5)
+                                    .color(T::ACCENT),
+                            );
                         } else if self.format == OutputFormat::Ico {
                             ui.label(
                                 RichText::new("Vista del icono generado")
@@ -896,7 +996,11 @@ impl HunkApp {
         let Some(source) = self.source.as_ref() else {
             return;
         };
-        let source_size = vec2(source.width as f32, source.height as f32);
+        let source_texture = source.texture.id();
+        let source_width = source.width;
+        let source_height = source.height;
+        let source_pixels = Arc::clone(&source.pixels);
+        let source_size = vec2(source_width as f32, source_height as f32);
         let icon_mode = self.format == OutputFormat::Ico;
 
         if icon_mode {
@@ -937,17 +1041,35 @@ impl HunkApp {
         let image_rect = fit_rect(source_size, area);
         paint_checker(painter, image_rect);
         painter.image(
-            source.texture.id(),
+            source_texture,
             image_rect,
             Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
             Color32::WHITE,
         );
 
-        let result = self
+        let result_texture = self
             .result
             .as_ref()
-            .filter(|result| result.format == self.format);
-        if let Some(result) = result {
+            .filter(|result| result.format == self.format)
+            .map(|result| result.texture.id());
+
+        if self.eyedropper_active {
+            if response.hovered() {
+                ctx.set_cursor_icon(CursorIcon::Crosshair);
+            }
+            if (response.is_pointer_button_down_on() || response.clicked())
+                && let Some(position) = ctx.input(|input| input.pointer.interact_pos())
+                && image_rect.contains(position)
+            {
+                let nx = ((position.x - image_rect.left()) / image_rect.width()).clamp(0.0, 1.0);
+                let ny = ((position.y - image_rect.top()) / image_rect.height()).clamp(0.0, 1.0);
+                let x = (nx * source_width.saturating_sub(1) as f32).round() as u32;
+                let y = (ny * source_height.saturating_sub(1) as f32).round() as u32;
+                let pixel = source_pixels.get_pixel(x, y);
+                self.sampled_color = Some(pixel.0);
+                self.sampled_position = Some((x, y));
+            }
+        } else if result_texture.is_some() {
             if (response.dragged() || response.clicked())
                 && let Some(position) = ctx.input(|input| input.pointer.interact_pos())
             {
@@ -957,6 +1079,9 @@ impl HunkApp {
             if response.hovered() {
                 ctx.set_cursor_icon(CursorIcon::ResizeHorizontal);
             }
+        }
+
+        if let Some(texture_id) = result_texture {
             let split_x = image_rect.left() + image_rect.width() * self.split;
             let mut clipped = painter.clone();
             clipped.set_clip_rect(Rect::from_min_max(
@@ -964,7 +1089,7 @@ impl HunkApp {
                 pos2(split_x, image_rect.max.y),
             ));
             clipped.image(
-                result.texture.id(),
+                texture_id,
                 image_rect,
                 Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0)),
                 Color32::WHITE,
@@ -1014,6 +1139,26 @@ impl HunkApp {
             );
         }
 
+        if let (Some(rgba), Some((sample_x, sample_y))) =
+            (self.sampled_color, self.sampled_position)
+        {
+            let ratio_x = sample_x as f32 / source_width.saturating_sub(1).max(1) as f32;
+            let ratio_y = sample_y as f32 / source_height.saturating_sub(1).max(1) as f32;
+            let marker =
+                image_rect.min + vec2(ratio_x * image_rect.width(), ratio_y * image_rect.height());
+            painter.circle_stroke(
+                marker,
+                8.0,
+                Stroke::new(3.0, Color32::from_black_alpha(180)),
+            );
+            painter.circle_stroke(marker, 8.0, Stroke::new(1.2, Color32::WHITE));
+            painter.circle_filled(
+                marker,
+                3.0,
+                Color32::from_rgba_unmultiplied(rgba[0], rgba[1], rgba[2], rgba[3]),
+            );
+        }
+
         paint_badge(
             painter,
             image_rect.left_top() + vec2(10.0, 10.0),
@@ -1031,7 +1176,6 @@ impl HunkApp {
             T::ACCENT_INK,
         );
     }
-
     fn show_preview_footer(&mut self, ui: &mut egui::Ui) {
         let source_size = self.source.as_ref().map(|source| source.file_bytes);
         let output_size = self
@@ -1142,7 +1286,7 @@ impl HunkApp {
                             }
                             ui.add_space(16.0);
                             ui.label(
-                                RichText::new("PNG · JPG · WEBP · BMP · TGA")
+                                RichText::new("PNG · JPG · WEBP · BMP · TGA · SVG")
                                     .size(9.0)
                                     .color(T::TEXT_FAINT)
                                     .strong(),
@@ -1207,12 +1351,15 @@ impl HunkApp {
         let Some(path) = self.screenshot_path.clone() else {
             return;
         };
-        if self.screenshot_requested || self.busy() || self.result.is_none() {
+        if self.screenshot_requested {
+            return;
+        }
+        if self.source.is_some() && (self.busy() || self.result.is_none()) {
             return;
         }
         let at = *self
             .screenshot_at
-            .get_or_insert_with(|| Instant::now() + Duration::from_millis(350));
+            .get_or_insert_with(|| Instant::now() + self.screenshot_delay);
         let now = Instant::now();
         if now < at {
             ctx.request_repaint_after(at - now);

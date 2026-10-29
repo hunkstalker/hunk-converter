@@ -9,6 +9,8 @@ use super::color::flatten_rgba;
 use super::ico::{IcoOutput, encode_ico};
 
 pub const PREVIEW_MAX_SIDE: u32 = 2048;
+pub const MAX_SOURCE_SIDE: u32 = 16_384;
+pub const MAX_SOURCE_PIXELS: u32 = 40_000_000;
 pub const ICO_SIZES: [u32; 6] = [16, 32, 48, 64, 128, 256];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -204,25 +206,73 @@ pub fn load_image_file(path: &Path) -> Result<LoadedImage, String> {
 
     let bytes =
         std::fs::read(path).map_err(|error| format!("No se pudo leer el archivo: {error}"))?;
+
+    if path
+        .extension()
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("svg"))
+    {
+        let pixels = decode_svg(&bytes, path)?;
+        return Ok(LoadedImage {
+            pixels,
+            format: "SVG".to_owned(),
+            file_bytes: bytes.len() as u64,
+        });
+    }
+
     let guessed = image::guess_format(&bytes)
         .or_else(|_| ImageFormat::from_path(path))
         .map_err(|_| "El archivo no parece una imagen compatible.".to_owned())?;
     let decoded = image::load_from_memory_with_format(&bytes, guessed)
         .map_err(|error| format!("No se pudo decodificar la imagen: {error}"))?;
     let pixels = decoded.to_rgba8();
-    let (width, height) = pixels.dimensions();
-    if width == 0 || height == 0 {
-        return Err("La imagen no tiene dimensiones válidas.".to_owned());
-    }
-    if width > 16_384 || height > 16_384 || u64::from(width) * u64::from(height) > 40_000_000 {
-        return Err("La imagen supera el límite de 40 MP o 16 384 px por lado.".to_owned());
-    }
+    validate_dimensions(pixels.width(), pixels.height())?;
 
     Ok(LoadedImage {
         pixels,
         format: format_name(guessed).to_owned(),
         file_bytes: bytes.len() as u64,
     })
+}
+
+fn decode_svg(bytes: &[u8], path: &Path) -> Result<RgbaImage, String> {
+    let mut options = resvg::usvg::Options {
+        resources_dir: path.parent().map(Path::to_path_buf),
+        ..Default::default()
+    };
+    options.fontdb_mut().load_system_fonts();
+    options
+        .fontdb_mut()
+        .load_font_data(include_bytes!("../../assets/fonts/Manrope.ttf").to_vec());
+
+    let tree = resvg::usvg::Tree::from_data(bytes, &options)
+        .map_err(|error| format!("No se pudo interpretar el SVG: {error}"))?;
+    let size = tree.size().to_int_size();
+    let width = size.width();
+    let height = size.height();
+    validate_dimensions(width, height)?;
+
+    let mut pixmap = resvg::tiny_skia::Pixmap::new(width, height)
+        .ok_or_else(|| "No se pudo crear el lienzo del SVG.".to_owned())?;
+    resvg::render(
+        &tree,
+        resvg::tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
+    RgbaImage::from_raw(width, height, pixmap.take())
+        .ok_or_else(|| "El SVG no produjo una imagen válida.".to_owned())
+}
+
+fn validate_dimensions(width: u32, height: u32) -> Result<(), String> {
+    if width == 0 || height == 0 {
+        return Err("La imagen no tiene dimensiones válidas.".to_owned());
+    }
+    if width > MAX_SOURCE_SIDE
+        || height > MAX_SOURCE_SIDE
+        || u64::from(width) * u64::from(height) > u64::from(MAX_SOURCE_PIXELS)
+    {
+        return Err("La imagen supera el límite de 40 MP o 16 384 px por lado.".to_owned());
+    }
+    Ok(())
 }
 
 fn format_name(format: ImageFormat) -> &'static str {
@@ -266,6 +316,15 @@ mod tests {
                 255,
             ])
         })
+    }
+
+    #[test]
+    fn renders_svg() {
+        let svg = br##"<svg xmlns="http://www.w3.org/2000/svg" width="64" height="40"><rect width="64" height="40" fill="#ff0000"/></svg>"##;
+        let image = decode_svg(svg, Path::new("test.svg")).unwrap();
+        assert_eq!(image.dimensions(), (64, 40));
+        let pixel = image.get_pixel(32, 20);
+        assert!(pixel[0] > 240 && pixel[1] < 10 && pixel[2] < 10);
     }
 
     #[test]
