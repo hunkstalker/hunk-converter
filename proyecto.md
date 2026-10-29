@@ -67,8 +67,10 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 
 ### 3.4 Cuentagotas
 
-- Botón **Activar** en el panel inferior.
-- Al activarlo, hacer clic o arrastrar sobre la vista de imagen muestrea el píxel correspondiente de la imagen original.
+- Icono de **cuentagotas** en la cabecera de la tarjeta inferior.
+- Un clic activa o desactiva el modo; después basta con hacer clic sobre la imagen.
+- También se puede pulsar el icono y arrastrar hasta el píxel: se muestrea mientras se arrastra y se conserva el último color al soltar.
+- `Esc` desactiva el modo sin alterar la muestra.
 - Se muestran las coordenadas del píxel muestreado.
 - Se dibuja una marca visual sobre la imagen.
 - Códigos simultáneos: **HEX, RGB, RGBA y HSL**, cada uno con botón de copia.
@@ -189,9 +191,11 @@ Archivo local
 - La posición del puntero se convierte a coordenadas del píxel original completo.
 - El color se lee de la imagen RGBA original, no del resultado recomprimido.
 - Se conservan los cuatro canales, de modo que RGBA muestra la transparencia real.
+- El icono alterna el modo al hacer clic; si se arrastra desde él, se activa y muestrea bajo el puntero.
 - El modo tiene prioridad sobre el arrastre del divisor.
 - La marca de muestreo se pinta con contraste claro/oscuro.
-- En modo ICO el botón queda deshabilitado para no muestrear una representación engañosa.
+- `Esc` cancela el modo.
+- En modo ICO el icono queda deshabilitado para no muestrear una representación engañosa.
 
 ### ICO
 

@@ -18,7 +18,7 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Calidad ajustable** de 1 a 100 para WebP y JPG (82 % por defecto).
 - **Comparador visual** antes/después con divisor arrastrable y soporte de teclado.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
-- **Cuentagotas:** activa el modo y haz clic sobre la imagen para capturar un color.
+- **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
 - **PNG sin pérdida** y transparencia conservada en WebP/PNG/ICO.
@@ -32,9 +32,11 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 ## Cuentagotas
 
 1. Carga una imagen.
-2. Pulsa **Activar** en la tarjeta del cuentagotas.
-3. Haz clic o arrastra sobre la imagen.
+2. Pulsa el **icono de cuentagotas** en la tarjeta inferior.
+3. Haz clic sobre la imagen o arrastra desde el icono hasta el píxel que quieras.
 4. Copia cualquiera de sus códigos de color.
+
+El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo con `Esc`.
 
 La muestra se toma del píxel original, no del resultado recompimido, y conserva el canal alfa. En la vista ICO el cuentagotas se desactiva porque esa vista representa el icono generado, no la imagen de origen.
 

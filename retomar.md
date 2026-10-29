@@ -69,7 +69,7 @@ Builds portables:
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
 - **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
 - **Vista previa fiel:** decodificar el buffer final, no estimar.
-- **Cuentagotas:** muestrea el píxel original; no mueve el divisor; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
+- **Cuentagotas:** icono de pipeta; un clic activa o desactiva el modo y también se puede arrastrar desde el icono hasta la imagen; muestrea el píxel original; no mueve el divisor; se cancela con `Esc`; se desactiva en ICO; limpia la muestra al cambiar de imagen o reiniciar.
 - **JPG:** transparencia compuesta sobre blanco.
 - **ICO:** frames PNG, contenedor manual, ajuste centrado sin recorte, al menos un tamaño.
 - **Calidad inicial:** 82 %.

@@ -10,7 +10,7 @@
 | --- | ---: | ---: | ---: |
 | Binario Linux | 70,7 MiB | **9,1 MiB** | **−87,2 %** |
 | Binario Windows | 104,7 MiB | **7,8 MiB** | **−92,6 %** |
-| Arranque a ventana (mediana, 10 runs) | 239,8 ms | **171,4 ms** | **−28,5 %** |
+| Arranque a ventana (mediana, 20 runs) | 239,8 ms | **177,8 ms** | **−25,9 %** |
 | RAM en reposo (RSS) | 209,7 MiB | **101,4 MiB** | **−51,6 %** |
 | RAM con imagen 12 MP | 316,9 MiB | **211,6 MiB** | **−33,2 %** |
 | Pico con GUI e imagen 12 MP | 447,5 MiB | **335,4 MiB** | **−25,1 %** |
@@ -49,11 +49,11 @@ Las mediciones de interfaz se hicieron con las builds portables finales.
 
 | Artefacto | Godot | Rust/egui 0.2.0 | Reducción |
 | --- | ---: | ---: | ---: |
-| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 9.495.480 B (9,1 MiB) | 87,2 % |
-| Carpeta Linux | 74.178.860 B | 9.503.217 B | 87,2 % |
+| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 9.498.416 B (9,1 MiB) | 87,2 % |
+| Carpeta Linux | 74.178.860 B | 9.506.153 B | 87,2 % |
 | `.tar.gz` Linux | 27,7 MiB | 4,2 MiB | 84,9 % |
-| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 8.178.176 B (7,8 MiB) | 92,6 % |
-| Carpeta Windows | 109.842.428 B | 8.185.913 B | 92,5 % |
+| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 8.180.224 B (7,8 MiB) | 92,6 % |
+| Carpeta Windows | 109.842.428 B | 8.187.961 B | 92,5 % |
 | `.zip` Windows | 36,9 MiB | 3,7 MiB | 89,9 % |
 
 Dependencias:
@@ -74,18 +74,18 @@ frame pintado y no es un arranque en frío real.
 
 | Serie | Godot | Rust/egui 0.2.0 | Diferencia |
 | --- | ---: | ---: | ---: |
-| Mediana, 10 arranques en caliente | 239,8 ms | **171,4 ms** | −28,5 % |
-| Media | 243,5 ms | **173,0 ms** | −29,0 % |
-| Desviación estándar | 8,6 ms | 8,6 ms | — |
-| P95 | 262,1 ms | 191,8 ms | −26,8 % |
-| Rango | 235,1–262,1 ms | 164,1–191,8 ms | — |
-| Mediana tras expulsar el ejecutable de caché (8 runs) | 245,8 ms | **169,2 ms** | −31,2 % |
+| Mediana, 20 arranques en caliente | 239,8 ms | **177,8 ms** | −25,9 % |
+| Media | 243,5 ms | **179,9 ms** | −26,1 % |
+| Desviación estándar | 8,6 ms | 7,8 ms | — |
+| P95 | 262,1 ms | 192,9 ms | −26,4 % |
+| Rango | 235,1–262,1 ms | 170,2–201,9 ms | — |
+| Mediana tras expulsar el ejecutable de caché (10 runs) | 245,8 ms | **185,0 ms** | −24,7 % |
 
 Muestras en caliente:
 
 ```text
 Godot: 236,8 235,1 239,9 239,7 238,9 262,1 236,6 249,8 241,2 255,0 ms
-Rust:  165,1 175,4 172,1 168,2 170,6 164,1 174,6 184,0 164,1 191,8 ms
+Rust:  170,2 174,8 179,9 177,5 172,0 178,1 173,9 176,7 201,9 177,2 185,9 184,0 170,4 182,1 174,4 172,2 189,3 181,6 182,4 192,9 ms
 ```
 
 Se hizo una segunda tanda expulsando solo el ejecutable con
@@ -165,7 +165,7 @@ el WebP menores con el mismo valor nominal 82.
 1. **Tamaño:** la diferencia es estructural y enorme: 9,1 MiB frente a 70,7 MiB
    en Linux y 7,8 MiB frente a 104,7 MiB en Windows, incluso después de añadir
    SVG y el cuentagotas.
-2. **Arranque:** la aplicación Rust abre la ventana alrededor de un 28 % antes.
+2. **Arranque:** la aplicación Rust abre la ventana alrededor de un 26 % antes.
    Es una mejora real, aunque menor que la diferencia de tamaño.
 3. **Memoria:** Rust usa la mitad de RAM en reposo y entre un 25 % y un 34 %
    menos en los escenarios de imagen medidos.

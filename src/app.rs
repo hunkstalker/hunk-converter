@@ -739,6 +739,7 @@ impl HunkApp {
     }
 
     fn show_color_panel(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let mut activate_eyedropper = false;
         let mut toggle_eyedropper = false;
         let mut copy_text: Option<String> = None;
         let icon_mode = self.format == OutputFormat::Ico;
@@ -751,42 +752,21 @@ impl HunkApp {
             ui.horizontal(|ui| {
                 ui.label(T::eyebrow("CUENTAGOTAS"));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    let label = if self.eyedropper_active {
-                        "Activo"
+                    let response = eyedropper_button(ui, self.eyedropper_active, !icon_mode);
+                    let hint = if icon_mode {
+                        "El cuentagotas está disponible en la vista de imagen."
+                    } else if self.eyedropper_active {
+                        "Desactivar el cuentagotas"
                     } else {
-                        "Activar"
+                        "Activar el cuentagotas · también puedes arrastrar hasta la imagen"
                     };
-                    let button = egui::Button::new(
-                        RichText::new(label)
-                            .size(9.5)
-                            .color(if self.eyedropper_active {
-                                T::ACCENT_INK
-                            } else {
-                                T::TEXT_MUTED
-                            })
-                            .strong(),
-                    )
-                    .selected(self.eyedropper_active)
-                    .fill(if self.eyedropper_active {
-                        T::ACCENT
-                    } else {
-                        T::SURFACE_3
-                    })
-                    .stroke(Stroke::new(
-                        1.0,
-                        if self.eyedropper_active {
-                            T::ACCENT
-                        } else {
-                            T::BORDER
-                        },
-                    ))
-                    .corner_radius(CornerRadius::same(8));
-                    let response = ui.add_enabled(!icon_mode, button);
-                    if icon_mode {
-                        response
-                            .on_hover_text("El cuentagotas está disponible en la vista de imagen.");
-                    } else if response.clicked() {
-                        toggle_eyedropper = true;
+                    let response = response.on_hover_text(hint);
+                    if !icon_mode {
+                        if response.drag_started() {
+                            activate_eyedropper = true;
+                        } else if response.clicked() {
+                            toggle_eyedropper = true;
+                        }
                     }
                 });
             });
@@ -814,11 +794,15 @@ impl HunkApp {
                     let message = if icon_mode {
                         "Cambia a WebP, JPG o PNG para muestrear."
                     } else if self.eyedropper_active {
-                        "Haz clic sobre la imagen."
+                        if sample.is_some() {
+                            "Muestra capturada · elige otro píxel."
+                        } else {
+                            "Haz clic o arrastra sobre la imagen."
+                        }
                     } else if sample.is_some() {
                         "Muestra capturada."
                     } else {
-                        "Activa y haz clic sobre la imagen."
+                        "Pulsa el cuentagotas y elige un píxel."
                     };
                     ui.label(RichText::new(message).size(9.5).color(T::TEXT_MUTED));
                     if let Some((x, y)) = sampled_position {
@@ -865,7 +849,10 @@ impl HunkApp {
             }
         });
 
-        if toggle_eyedropper {
+        if activate_eyedropper {
+            self.eyedropper_active = true;
+            ctx.request_repaint();
+        } else if toggle_eyedropper {
             self.eyedropper_active = !self.eyedropper_active;
             ctx.request_repaint();
         }
@@ -948,9 +935,11 @@ impl HunkApp {
                             ui.label(RichText::new("Procesando…").size(9.5).color(T::TEXT_MUTED));
                         } else if self.eyedropper_active {
                             ui.label(
-                                RichText::new("Cuentagotas activo · haz clic en la imagen")
-                                    .size(9.5)
-                                    .color(T::ACCENT),
+                                RichText::new(
+                                    "Cuentagotas activo · haz clic o arrastra sobre la imagen",
+                                )
+                                .size(9.5)
+                                .color(T::ACCENT),
                             );
                         } else if self.format == OutputFormat::Ico {
                             ui.label(
@@ -1057,7 +1046,7 @@ impl HunkApp {
             if response.hovered() {
                 ctx.set_cursor_icon(CursorIcon::Crosshair);
             }
-            if (response.is_pointer_button_down_on() || response.clicked())
+            if (ctx.input(|input| input.pointer.primary_down()) || response.clicked())
                 && let Some(position) = ctx.input(|input| input.pointer.interact_pos())
                 && image_rect.contains(position)
             {
@@ -1399,6 +1388,11 @@ impl eframe::App for HunkApp {
             self.load_path(&path, &ctx);
         }
 
+        if self.eyedropper_active && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.eyedropper_active = false;
+            ctx.request_repaint();
+        }
+
         let (export_shortcut, reset_shortcut, open_shortcut) = ctx.input(|input| {
             let command = input.modifiers.command;
             (
@@ -1435,6 +1429,90 @@ impl eframe::App for HunkApp {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
         T::BG.to_normalized_gamma_f32()
     }
+}
+
+fn eyedropper_button(ui: &mut egui::Ui, active: bool, enabled: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(32.0, 28.0), Sense::click_and_drag());
+    let hovered = enabled && response.hovered();
+    let fill = if active && enabled {
+        T::ACCENT
+    } else if hovered {
+        T::SURFACE_3
+    } else {
+        T::SURFACE_2
+    };
+    let border = if active && enabled {
+        T::ACCENT
+    } else if hovered {
+        T::BORDER_STRONG
+    } else {
+        T::BORDER
+    };
+    let icon = if !enabled {
+        T::TEXT_FAINT
+    } else if active {
+        T::ACCENT_INK
+    } else {
+        T::TEXT_MUTED
+    };
+
+    let painter = ui.painter();
+    painter.rect(
+        rect,
+        CornerRadius::same(8),
+        fill,
+        Stroke::new(1.0, border),
+        StrokeKind::Inside,
+    );
+    paint_eyedropper(painter, rect.shrink2(vec2(8.0, 6.0)), icon);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, "Cuentagotas"));
+
+    if enabled {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    }
+}
+
+fn paint_eyedropper(painter: &egui::Painter, rect: Rect, color: Color32) {
+    let size = rect.width().min(rect.height());
+    let center = rect.center();
+    let tip = pos2(center.x - size * 0.40, center.y + size * 0.40);
+    let shoulder = pos2(center.x - size * 0.08, center.y + size * 0.08);
+    let bulb_center = pos2(center.x + size * 0.28, center.y - size * 0.28);
+    let direction = (bulb_center - shoulder).normalized();
+    let perpendicular = vec2(-direction.y, direction.x);
+
+    painter.line_segment(
+        [tip + direction * size * 0.05, bulb_center],
+        Stroke::new(size * 0.11, color),
+    );
+    painter.circle_filled(bulb_center, size * 0.22, color);
+    painter.line_segment(
+        [
+            shoulder - perpendicular * size * 0.18,
+            shoulder + perpendicular * size * 0.18,
+        ],
+        Stroke::new(size * 0.08, color),
+    );
+    painter.line_segment(
+        [
+            bulb_center + direction * size * 0.14,
+            bulb_center + direction * size * 0.26,
+        ],
+        Stroke::new(size * 0.08, color),
+    );
+
+    let tip_base = tip + direction * size * 0.18;
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            tip,
+            tip_base + perpendicular * size * 0.12,
+            tip_base - perpendicular * size * 0.12,
+        ],
+        color,
+        Stroke::NONE,
+    ));
 }
 
 fn format_card(

@@ -71,7 +71,7 @@
 **Descripción:** Añadir un cuentagotas que permita seleccionar píxeles de la imagen cargada desde la vista previa y mostrar sus códigos HEX, RGB, RGBA y HSL, con copia al portapapeles. El modo debe poder activarse y desactivarse, indicar las coordenadas del píxel, dibujar una marca de muestreo y desactivarse cuando no tenga sentido (vista ICO).
 
 **Completada:** 2026-10-28
-**Resultado:** Cuentagotas implementado en el panel inferior de la versión Rust. Muestrea el píxel original al hacer clic o arrastrar, conserva la posición del divisor, muestra coordenadas y los cuatro códigos con copia, y se desactiva en la vista ICO. Verificado con interacción real bajo Xvfb.
+**Resultado:** Cuentagotas implementado en el panel inferior de la versión Rust con un icono dedicado. Se activa con un clic o arrastrando desde el icono hasta la imagen, muestrea el píxel original, conserva la posición del divisor, muestra coordenadas y los cuatro códigos con copia, y se desactiva en la vista ICO. También se cancela con `Esc`. Verificado con interacción real bajo Xvfb.
 
 ## t-20 — Prueba de concepto Rust + egui
 
