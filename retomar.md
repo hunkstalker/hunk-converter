@@ -1,11 +1,11 @@
-# Retomar hunk-converter
+# Retomar Hunk Converter
 
 > Punto de entrada para nuevas sesiones. Última actualización: **2026-10-29**.
 > Versión: **0.2.0** · Rama: **main** · Estado: **aplicación principal Rust + egui, portable**.
 
 ## 1. Qué es este proyecto
 
-**hunk-converter** es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. Está hecha en **Rust + egui**, usa el renderizador **glow** y no requiere instalador.
+**Hunk Converter** es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. Está hecha en **Rust + egui**, usa el renderizador **glow** y no requiere instalador.
 
 Puede exportar WebP, AVIF, JPG, PNG, JPEG XL e ICO. La vista previa compara el original con el archivo codificado real. Incluye un cuentagotas que obtiene colores de la imagen y muestra sus códigos HEX/RGB/RGBA/HSL. Los resultados se guardan en `export/`, junto al ejecutable.
 
@@ -19,20 +19,23 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 
 ## 2. Estado actual
 
-- Interfaz completa en español y tema oscuro propio.
+- Interfaz en español, catalán e inglés, con detección del idioma del sistema y tema oscuro propio.
 - Carga por arrastre, selector nativo, argumento de línea de comandos o `Ctrl+V` desde el portapapeles.
 - Entrada: PNG, JPG, WebP, BMP, TGA y SVG.
 - Salida: WebP, AVIF, JPG, PNG, JPEG XL e ICO.
 - Calidad 1–100 para WebP/JPG/AVIF; PNG y JPEG XL sin pérdida; JPG aplanado sobre blanco.
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
-- Cuentagotas con muestra del píxel original, coordenadas y códigos HEX/RGB/RGBA/HSL; copia al portapapeles.
+- Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación.
+- Historial de 20 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
+- Idioma, historial y bloqueos se guardan en `config.ini`, junto al ejecutable.
+- Icono propio de máscara de gas y marca **Hunk Converter / IMAGE TOOLBOX**.
 - Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
 - Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
 - Reinicio, atajos y avisos de error.
 - **Render bajo demanda:** sin repintado de UI cuando la ventana está quieta.
 - Builds portables de Linux y Windows; assets y fuente embebidos.
-- **10 pruebas Rust**, clippy y formato limpios.
+- **13 pruebas Rust**, clippy y formato limpios.
 - CI de Rust en GitHub Actions.
 - Benchmark comparativo completo en `docs/benchmark-2026-10-28.md`.
 
@@ -68,6 +71,10 @@ Builds portables:
 ## 4. Decisiones que no se deben romper
 
 - **Portapapeles:** `Ctrl+V` intenta leer una imagen del portapapeles y sustituye la imagen actual; si no hay imagen, no hace nada.
+- **Idioma:** `config.ini` guarda el idioma (es/ca/en) y el historial; en el primer arranque se detecta el idioma del sistema.
+- **Historial:** 20 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa.
+- **Cuentagotas:** el clic derecho sobre la imagen lo desactiva. Los botones de copia son iconos y muestran un aviso temporal.
+- **Marca:** el nombre visible es **Hunk Converter**; el nombre técnico del binario sigue siendo `hunk-converter`.
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
 - **No sobrescribir:** `foto.webp`, `foto-2.webp`, etc.
 - **Vista previa fiel:** decodificar el buffer final, no estimar.
@@ -89,7 +96,9 @@ Builds portables:
 
 ```text
 src/main.rs                  eframe, ventana e icono
-src/app.rs                   UI, estado, cuentagotas, hilos y exportación
+src/app.rs                   UI, estado, cuentagotas, historial, hilos y exportación
+src/config.rs                config.ini, idioma e historial
+src/i18n.rs                  Traducciones es/ca/en
 src/core/codec.rs            Carga/decodificación/codificación
 src/core/color.rs            Códigos de color y aplanado
 src/core/ico.rs              Contenedor ICO
@@ -97,6 +106,7 @@ src/demo.rs                  Imagen sintética para demos/capturas
 src/theme.rs                 Tema egui
 src/bin/bench.rs             Benchmark de códecs
 src/bin/make_demo.rs         Generador de muestra
+src/bin/make_icon.rs         Rasteriza el icono SVG
 scripts/build_dist.sh        Empaquetado portable
 assets/                      Manrope, iconos y licencias
 docs/                        Capturas e informe de benchmark
@@ -108,8 +118,8 @@ t-completadas.md            Tareas cerradas
 
 ## 6. Tareas
 
-- Pendientes: `todo.md` (t-10 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-19, t-20, t-21, t-25 y t-26).
+- Pendientes: `todo.md` (t-10 a t-13, t-15 a t-18, t-22 a t-24).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27 y t-28).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 

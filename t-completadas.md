@@ -85,7 +85,7 @@
 **Descripción:** Convertir el piloto en la aplicación principal, completar la paridad imprescindible del producto, reemplazar el selector de color de fondo por el cuentagotas, añadir soporte SVG, renombrar la aplicación a hunk-converter 0.2.0, empaquetar Linux y Windows, actualizar documentación y archivar el prototipo Godot.
 
 **Completada:** 2026-10-28
-**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 10 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.
+**Resultado:** Aplicación principal en Rust con egui; UI event-driven sin repintado continuo, comparador, ICO, exportación portable, cuentagotas y SVG. Suite de 13 pruebas Rust, clippy y formato limpios. Builds portables Linux y Windows generadas. El prototipo Godot queda archivado como referencia. La build Windows está generada, pero su ejecución en Windows sigue pendiente en t-23.
 
 ## t-25 — Zoom con rueda y paneo del lienzo
 
@@ -100,3 +100,24 @@
 
 **Completada:** 2026-10-29
 **Resultado:** AVIF con calidad 1–100 y JPEG XL sin pérdida. PNG y JPEG XL no muestran deslizador porque no modifican la calidad. Las vistas previas se decodifican con `avif-decode` y `jxl-oxide`. Se reorganizó la rejilla de formatos y se corrigieron los badges del comparador. Verificado con pruebas y exportación real AVIF/JPEG XL.
+
+## t-14 — Interfaz en inglés
+
+**Descripción:** Internacionalizar los textos de interfaz, avisos y tooltips, con español como idioma predeterminado e inglés como alternativa. Incluir un selector de idioma y recordar la preferencia.
+
+**Completada:** 2026-10-29
+**Resultado:** Interfaz traducida a español, catalán e inglés. Selector en la cabecera, detección del idioma del sistema en el primer arranque y persistencia en `config.ini`.
+
+## t-27 — Historial de colores del cuentagotas
+
+**Descripción:** Añadir un historial de 20 colores integrado en la tarjeta del cuentagotas, con selección por clic izquierdo, bloqueo por clic derecho, limpieza de colores no fijados y persistencia en `config.ini`. Al llenarse, sustituir el color no fijado más antiguo y avisar si todos están fijados.
+
+**Completada:** 2026-10-29
+**Resultado:** Historial de 20 colores en tres filas, con candado visible, anillo de selección, papelera para limpiar no fijados y avisos de historial lleno. Verificado con muestreo real, bloqueo, selección y persistencia en config.ini.
+
+## t-28 — Marca Hunk Converter e icono de máscara de gas
+
+**Descripción:** Cambiar el nombre visible a Hunk Converter, el subtítulo a IMAGE TOOLBOX, actualizar el pie de versión y crear un icono original de máscara de gas.
+
+**Completada:** 2026-10-29
+**Resultado:** Cabecera «Hunk Converter / IMAGE TOOLBOX», pie «Rust + egui · Open Source · v0.2.0», icono SVG original de máscara de gas rasterizado a PNG y usado en la ventana y la cabecera.

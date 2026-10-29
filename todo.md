@@ -20,10 +20,6 @@
 
 **Descripción:** Extender la integración continua para ejecutar la suite, compilar las builds portables de Linux y Windows y publicar artefactos con checksums al crear una etiqueta de versión. Mantener la build sin instalador y la carpeta `export/` junto al ejecutable.
 
-## t-14 — Interfaz en inglés
-
-**Descripción:** Internacionalizar todos los textos de interfaz, avisos, tooltips y documentación de usuario, con español como idioma predeterminado e inglés como alternativa. Incluir un selector de idioma y recordar la preferencia de forma local.
-
 ## t-15 — Entrada HEIC y códecs opcionales
 
 **Descripción:** Evaluar HEIC como formato de entrada manteniendo la portabilidad y sin introducir llamadas de red. AVIF y JPEG XL ya están integrados como salida (`t-26`); queda valorar si los códecs pesados deben poder excluirse mediante features de Cargo y documentar el impacto en tamaño y compilación.

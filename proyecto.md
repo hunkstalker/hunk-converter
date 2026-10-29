@@ -1,11 +1,11 @@
-# Proyecto — hunk-converter
+# Proyecto — Hunk Converter
 
 > Documento vivo. Última actualización: 2026-10-29.
 > Versión actual: **0.2.0** · Estado: **aplicación principal Rust + egui, portable y funcional**.
 
 ## 1. Visión
 
-hunk-converter es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. También genera iconos `.ico` multirresolución para Windows.
+Hunk Converter es una aplicación de escritorio local-first para convertir, comprimir, comparar y exportar imágenes. También genera iconos `.ico` multirresolución para Windows.
 
 El producto está diseñado para hacer tres operaciones sin fricción:
 
@@ -79,15 +79,24 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Icono de **cuentagotas** en la cabecera de la tarjeta inferior.
 - Un clic activa o desactiva el modo; después basta con hacer clic sobre la imagen.
 - También se puede pulsar el icono y arrastrar hasta el píxel: se muestrea mientras se arrastra y se conserva el último color al soltar.
-- `Esc` desactiva el modo sin alterar la muestra.
+- `Esc` o clic derecho sobre la imagen desactivan el modo sin alterar la muestra.
 - Se muestran las coordenadas del píxel muestreado.
 - La marca visual de muestreo solo se dibuja mientras el cuentagotas está activo.
-- Códigos simultáneos: **HEX, RGB, RGBA y HSL**, cada uno con botón de copia.
+- Códigos simultáneos: **HEX, RGB, RGBA y HSL**, cada uno con botón de icono para copiar y aviso de confirmación.
 - El muestreo no mueve el divisor del comparador.
 - En modo ICO se desactiva, porque la vista no representa la imagen original.
 - La muestra y el zoom se reinician al cargar otra imagen o reiniciar la sesión.
+- **Historial:** 20 colores en tres filas. Clic izquierdo selecciona; clic derecho fija o libera. El color no fijado más antiguo se reemplaza cuando está lleno. El botón de papelera limpia los no fijados.
+- El historial y los bloqueos se guardan en `config.ini`.
 
-### 3.5 Exportación
+### 3.5 Idiomas y configuración
+
+- Selector **ES / CA / EN** junto al botón de reinicio.
+- En el primer arranque se detecta el idioma del sistema con `sys-locale`.
+- La preferencia, el historial y los bloqueos se guardan en `config.ini`, junto al ejecutable.
+- Si el archivo no es escribible, la app sigue funcionando sin persistencia.
+
+### 3.6 Exportación
 
 - Botón principal **Exportar .ext** y atajo `Ctrl+E`.
 - Guardado directo en la carpeta **`export/`** situada junto al ejecutable.
@@ -97,7 +106,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - Los errores de permisos o escritura se comunican mediante aviso.
 - La build portable incluye una carpeta `export/` vacía junto al ejecutable.
 
-### 3.6 Reinicio y atajos
+### 3.7 Reinicio y atajos
 
 | Atajo | Acción |
 | --- | --- |
@@ -126,8 +135,9 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 ### Ventana y distribución
 
 - Tamaño inicial 1280 × 800; mínimo 1024 × 800.
-- Cabecera con marca y botón de reinicio.
-- Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, cuentagotas y exportación.
+- Cabecera con marca, selector de idioma y botón de reinicio.
+- La barra lateral tiene scroll vertical cuando el historial y el cuentagotas no caben; el botón de exportar queda fijo abajo.
+- Panel lateral de 390 px con archivo, formato, calidad o tamaños ICO, historial de colores, cuentagotas y exportación.
 - La tarjeta lateral conserva los radios superiores y las esquinas inferiores cuadradas, con margen derecho y separación respecto a la cabecera.
 - Zona principal con cabecera de vista previa, lienzo y pie de pesos.
 - Pie global con estado del proyecto y versión.
@@ -152,6 +162,8 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - `avif-decode`/rav1d para la vista previa AVIF.
 - `zune-jpegxl` para codificación JPEG XL y `jxl-oxide` para su vista previa.
 - `resvg` 0.49 para SVG.
+- `sys-locale` para detectar el idioma del sistema.
+- Icono original de máscara de gas en `assets/branding/icon.svg`; se rasteriza con `resvg`.
 - `rfd` para diálogo de archivos nativo.
 - Procesamiento en un hilo con canal `std::sync::mpsc`.
 - Sin runtime de Python, Node, Godot ni ImageMagick.
@@ -161,7 +173,9 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | Ruta | Responsabilidad |
 | --- | --- |
 | `src/main.rs` | Arranque de eframe, ventana, icono e inicialización |
-| `src/app.rs` | Estado, UI, interacción, cuentagotas, hilos y exportación |
+| `src/app.rs` | Estado, UI, interacción, cuentagotas, historial, hilos y exportación |
+| `src/config.rs` | `config.ini`, idioma e historial |
+| `src/i18n.rs` | Traducciones español/catalán/inglés |
 | `src/core/codec.rs` | Carga, decodificación, codificación y previews |
 | `src/core/color.rs` | Códigos de color y aplanado RGBA |
 | `src/core/ico.rs` | Contenedor ICO y frames PNG |
@@ -169,6 +183,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | `src/theme.rs` | Paleta, tipografía, estilos y frames |
 | `src/bin/bench.rs` | Benchmark de códecs y memoria |
 | `src/bin/make_demo.rs` | Generador de imágenes de prueba |
+| `src/bin/make_icon.rs` | Rasteriza el icono SVG a PNG |
 | `scripts/build_dist.sh` | Empaquetado portable Linux/Windows |
 | `docs/benchmark-2026-10-28.md` | Comparación de rendimiento y recursos |
 | `tests` integrados en los módulos | Pruebas unitarias Rust |
@@ -232,6 +247,7 @@ Archivo local
 
 - En una build: `<carpeta del ejecutable>/export/`.
 - En desarrollo: `target/release/export/`.
+- `config.ini` se crea junto al ejecutable y guarda idioma e historial.
 - Los nombres no se sobrescriben.
 
 ### Estructura de la build
@@ -239,6 +255,7 @@ Archivo local
 ```text
 hunk-converter-0.2.0-windows-x86_64/
 ├── hunk-converter.exe
+├── config.ini          (se crea al primer arranque)
 ├── export/
 ├── LEEME.txt
 ├── LICENSE.txt
@@ -281,7 +298,7 @@ Resumen del contexto de referencia:
 
 ## 9. Pruebas y verificación
 
-- **10 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG y zona de agarre del comparador.
+- **13 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG, historial, configuración y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
 - CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.

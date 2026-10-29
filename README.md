@@ -1,14 +1,14 @@
-# hunk-converter
+# Hunk Converter
 
 **Convierte, comprime, compara, muestrea colores y exporta imágenes sin salir de tu equipo.**
 
-hunk-converter es una aplicación de escritorio local-first escrita en **Rust + egui**. Arrastra una imagen, elige el formato de salida, ajusta la calidad y comprueba el resultado real con un comparador deslizante antes de guardarlo. También genera iconos `.ico` multirresolución.
+Hunk Converter es una aplicación de escritorio local-first escrita en **Rust + egui**. Arrastra una imagen, elige el formato de salida, ajusta la calidad y comprueba el resultado real con un comparador deslizante antes de guardarlo. También genera iconos `.ico` multirresolución.
 
 La interfaz solo repinta cuando hay actividad. No mantiene un bucle de render continuo mientras miras una imagen estática.
 
 Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexión a internet.
 
-![Editor de hunk-converter](docs/hunk-converter-editor.png)
+![Editor de Hunk Converter](docs/hunk-converter-editor.png)
 
 ## Características
 
@@ -21,7 +21,9 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Zoom y paneo:** rueda del ratón sobre la imagen y clic derecho para desplazarte.
 - **Vista previa fiel al archivo final**: se decodifica el resultado codificado real.
 - **Cuentagotas:** pulsa el icono y haz clic o arrastra sobre la imagen para capturar un color.
-- **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con copia al portapapeles.
+- **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con botones de copia y confirmación visual.
+- **Historial de colores:** 20 colores en dos filas de siete y una de seis, con bloqueo y limpieza.
+- **Idiomas:** español, catalán e inglés, con detección del sistema y preferencia guardada.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
 - **PNG y JPEG XL sin pérdida**, con transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
@@ -36,13 +38,30 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 1. Carga una imagen.
 2. Pulsa el **icono de cuentagotas** en la tarjeta inferior.
 3. Haz clic sobre la imagen o arrastra desde el icono hasta el píxel que quieras.
-4. Copia cualquiera de sus códigos de color.
+4. Copia cualquiera de sus códigos con el icono de portapapeles.
 
-El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo con `Esc`. La marca de muestreo solo se muestra mientras el cuentagotas está activo.
+El icono vuelve a pulsarse para desactivar el modo. También puedes cancelarlo con `Esc` o con clic derecho sobre la imagen. La marca de muestreo solo se muestra mientras el cuentagotas está activo.
 
 La muestra se toma del píxel original, no del resultado recompimido, y conserva el canal alfa. En la vista ICO el cuentagotas se desactiva porque esa vista representa el icono generado, no la imagen de origen.
 
-![Cuentagotas de hunk-converter](docs/hunk-converter-cuentagotas.png)
+![Cuentagotas de Hunk Converter](docs/hunk-converter-cuentagotas.png)
+
+## Historial de colores
+
+- Se guardan automáticamente los últimos **20 colores** muestreados.
+- **Clic izquierdo** en una muestra: usa ese color y actualiza los códigos.
+- **Clic derecho** en una muestra: la fija o la libera. Las muestras fijadas llevan un candado y no se reemplazan.
+- Cuando el historial está lleno, se sustituye el color no fijado más antiguo.
+- Si todos los colores están fijados, el color nuevo se muestra pero no entra al historial; aparece un aviso.
+- El botón de papelera limpia los colores no fijados.
+- El historial se conserva en `config.ini`, junto al ejecutable.
+
+## Idiomas y configuración
+
+- Selector **ES / CA / EN** en la cabecera.
+- En el primer arranque se detecta el idioma del sistema.
+- El idioma elegido, el historial y los bloqueos se guardan en `config.ini`, junto al ejecutable.
+- Si no se puede escribir el archivo, la aplicación sigue funcionando sin persistencia.
 
 ## Zoom y navegación
 
@@ -51,7 +70,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 - El porcentaje de zoom aparece en la cabecera de la vista previa; pulsa sobre él para volver al ajuste inicial.
 - El divisor y el cuentagotas siguen funcionando con cualquier zoom.
 
-![Zoom y paneo de hunk-converter](docs/hunk-converter-zoom.png)
+![Zoom y paneo de Hunk Converter](docs/hunk-converter-zoom.png)
 
 ## Capturas
 
@@ -122,6 +141,7 @@ Cada build es una carpeta autocontenida. La salida queda en `export/`, junto al 
 ```text
 hunk-converter-0.2.0-windows-x86_64/
 ├── hunk-converter.exe
+├── config.ini          (se crea al primer arranque)
 ├── export/
 ├── LEEME.txt
 ├── LICENSE.txt
@@ -150,7 +170,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
+La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, historial y configuración, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
 
 ## Rendimiento
 
@@ -167,9 +187,11 @@ La versión Rust/egui se comparó con el prototipo Godot antes de migrar. En el 
 ├── notes/                  Evidencia fechada de las sesiones
 ├── scripts/build_dist.sh   Empaquetado portable
 ├── src/
-│   ├── app.rs              Interfaz, estado, cuentagotas y exportación
+│   ├── app.rs              Interfaz, estado, cuentagotas e historial
+│   ├── config.rs           config.ini, idioma e historial
+│   ├── i18n.rs             Textos en español, catalán e inglés
 │   ├── core/               Códecs, ICO y conversión de color
-│   ├── bin/                Benchmark y generador de muestra
+│   ├── bin/                Benchmark, muestra y generador de icono
 │   ├── demo.rs             Imagen sintética para capturas
 │   └── theme.rs            Tema visual
 ├── proyecto.md             Documento vivo

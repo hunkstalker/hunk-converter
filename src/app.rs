@@ -11,21 +11,27 @@ use eframe::egui::{
 };
 use image::{ImageFormat, RgbaImage, imageops};
 
-use crate::core::codec::{
-    self, EncodeOptions, EncodedOutput, ICO_SIZES, OutputFormat, format_bytes,
-};
+use crate::config::{self, HISTORY_LIMIT, HistoryEntry};
+use crate::core::codec::{self, EncodeOptions, EncodedOutput, ICO_SIZES, OutputFormat};
 use crate::core::color;
+use crate::i18n::{self, K, Lang};
 use crate::theme as T;
 
 const ENCODE_DELAY_MS: u64 = 160;
 const UI_PREVIEW_MAX: u32 = 2048;
 const MIN_ZOOM: f32 = 1.0;
 const MAX_ZOOM: f32 = 8.0;
+const HISTORY_COLUMNS: usize = 7;
+const SWATCH_SIZE: f32 = 32.0;
+const SWATCH_GAP: f32 = 4.0;
 
 pub struct HunkApp {
     source: Option<Source>,
     result: Option<RenderedResult>,
     brand_icon: Option<TextureHandle>,
+    language: Lang,
+    history: Vec<HistoryEntry>,
+    sample_pending_history: bool,
     format: OutputFormat,
     quality: u8,
     ico_selected: [bool; 6],
@@ -98,10 +104,14 @@ impl HunkApp {
             .skip(1)
             .find(|argument| !argument.starts_with("--") && Path::new(argument).is_file());
 
+        let settings = config::Settings::load();
         let mut app = Self {
             source: None,
             result: None,
             brand_icon,
+            language: settings.language,
+            history: settings.history,
+            sample_pending_history: false,
             format: OutputFormat::Webp,
             quality: 82,
             ico_selected: [true; 6],
@@ -140,6 +150,32 @@ impl HunkApp {
         }
 
         app
+    }
+
+    fn t(&self, key: K) -> &'static str {
+        i18n::t(self.language, key)
+    }
+
+    fn save_settings(&self) {
+        config::Settings {
+            language: self.language,
+            history: self.history.clone(),
+        }
+        .save();
+    }
+
+    fn remember_color(&mut self, rgba: [u8; 4]) -> bool {
+        if config::remember_color(&mut self.history, rgba) {
+            self.save_settings();
+            true
+        } else {
+            self.toast = Some(Toast {
+                message: self.t(K::HistoryFull).to_owned(),
+                error: true,
+                until: Instant::now() + Duration::from_secs(4),
+            });
+            false
+        }
     }
 
     fn selected_ico_sizes(&self) -> Vec<u32> {
@@ -227,7 +263,7 @@ impl HunkApp {
         };
         if self.format == OutputFormat::Ico && self.selected_ico_sizes().is_empty() {
             self.toast = Some(Toast {
-                message: "Selecciona al menos un tamaño de icono.".to_owned(),
+                message: self.t(K::SelectIcoSizeToast).to_owned(),
                 error: true,
                 until: now + Duration::from_secs(3),
             });
@@ -273,7 +309,7 @@ impl HunkApp {
                         Ok(output) => self.apply_output(ctx, output, message.elapsed),
                         Err(error) => {
                             self.toast = Some(Toast {
-                                message: error,
+                                message: i18n::localize_error(self.language, &error),
                                 error: true,
                                 until: Instant::now() + Duration::from_secs(4),
                             });
@@ -285,7 +321,7 @@ impl HunkApp {
             Err(TryRecvError::Disconnected) => {
                 self.worker = None;
                 self.toast = Some(Toast {
-                    message: "El procesamiento en segundo plano se interrumpió.".to_owned(),
+                    message: self.t(K::WorkerInterrupted).to_owned(),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -348,6 +384,7 @@ impl HunkApp {
         self.eyedropper_active = false;
         self.sampled_color = None;
         self.sampled_position = None;
+        self.sample_pending_history = false;
         self.split = 0.5;
         self.zoom = MIN_ZOOM;
         self.pan = Vec2::ZERO;
@@ -362,11 +399,11 @@ impl HunkApp {
                 let name = path
                     .file_name()
                     .map(|value| value.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "imagen".to_owned());
+                    .unwrap_or_else(|| i18n::fallback_name(self.language).to_owned());
                 let stem = path
                     .file_stem()
                     .map(|value| value.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "imagen".to_owned());
+                    .unwrap_or_else(|| i18n::fallback_name(self.language).to_owned());
                 self.set_source(
                     loaded.pixels,
                     name,
@@ -378,7 +415,7 @@ impl HunkApp {
             }
             Err(error) => {
                 self.toast = Some(Toast {
-                    message: error,
+                    message: i18n::localize_error(self.language, &error),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -406,7 +443,7 @@ impl HunkApp {
             Ok(clipboard) => clipboard,
             Err(error) => {
                 self.toast = Some(Toast {
-                    message: format!("No se pudo abrir el portapapeles: {error}"),
+                    message: format!("{} {error}", self.t(K::ClipboardOpenError)),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -419,7 +456,7 @@ impl HunkApp {
             Err(arboard::Error::ContentNotAvailable) => return,
             Err(error) => {
                 self.toast = Some(Toast {
-                    message: format!("No se pudo leer la imagen del portapapeles: {error}"),
+                    message: format!("{} {error}", self.t(K::ClipboardReadError)),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -439,7 +476,7 @@ impl HunkApp {
             || u64::from(width) * u64::from(height) > u64::from(codec::MAX_SOURCE_PIXELS)
         {
             self.toast = Some(Toast {
-                message: "La imagen del portapapeles no tiene un tamaño válido.".to_owned(),
+                message: self.t(K::ClipboardInvalid).to_owned(),
                 error: true,
                 until: Instant::now() + Duration::from_secs(4),
             });
@@ -453,14 +490,16 @@ impl HunkApp {
         let file_bytes = clipboard_png_size(&pixels);
         self.set_source(
             pixels,
-            "portapapeles.png".to_owned(),
-            "portapapeles".to_owned(),
+            i18n::clipboard_name(self.language).to_owned(),
+            i18n::clipboard_name(self.language)
+                .trim_end_matches(".png")
+                .to_owned(),
             "PNG".to_owned(),
             file_bytes,
             ctx,
         );
         self.toast = Some(Toast {
-            message: "Imagen pegada desde el portapapeles.".to_owned(),
+            message: self.t(K::ClipboardPasted).to_owned(),
             error: false,
             until: Instant::now() + Duration::from_secs(3),
         });
@@ -470,7 +509,7 @@ impl HunkApp {
     fn open_file_dialog(&mut self, ctx: &egui::Context) {
         if let Some(path) = rfd::FileDialog::new()
             .add_filter(
-                "Imágenes",
+                self.t(K::ImagesFilter),
                 &["png", "jpg", "jpeg", "webp", "bmp", "tga", "svg"],
             )
             .pick_file()
@@ -491,6 +530,7 @@ impl HunkApp {
         self.eyedropper_active = false;
         self.sampled_color = None;
         self.sampled_position = None;
+        self.sample_pending_history = false;
         self.pending_since = None;
         self.revision = self.revision.wrapping_add(1);
         self.screenshot_at = None;
@@ -529,7 +569,7 @@ impl HunkApp {
             Some(path) => path.join("export"),
             None => {
                 self.toast = Some(Toast {
-                    message: "No se pudo localizar la carpeta de la aplicación.".to_owned(),
+                    message: self.t(K::ExportFolderError).to_owned(),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -538,7 +578,7 @@ impl HunkApp {
         };
         if let Err(error) = std::fs::create_dir_all(&directory) {
             self.toast = Some(Toast {
-                message: format!("No se pudo crear export/: {error}"),
+                message: format!("{} {error}", self.t(K::ExportCreateError)),
                 error: true,
                 until: Instant::now() + Duration::from_secs(4),
             });
@@ -561,14 +601,14 @@ impl HunkApp {
                     .map(|value| value.to_string_lossy().into_owned())
                     .unwrap_or_else(|| path.display().to_string());
                 self.toast = Some(Toast {
-                    message: format!("Imagen guardada en export/{file_name}"),
+                    message: i18n::saved_export(self.language, &file_name),
                     error: false,
                     until: Instant::now() + Duration::from_secs(4),
                 });
             }
             Err(error) => {
                 self.toast = Some(Toast {
-                    message: format!("No se pudo guardar la imagen: {error}"),
+                    message: format!("{} {error}", self.t(K::ExportWriteError)),
                     error: true,
                     until: Instant::now() + Duration::from_secs(4),
                 });
@@ -595,9 +635,9 @@ impl HunkApp {
                     ui.add_space(2.0);
                     ui.vertical(|ui| {
                         ui.add_space(1.0);
-                        ui.label(RichText::new("hunk-converter").size(21.0).color(T::TEXT));
+                        ui.label(RichText::new("Hunk Converter").size(21.0).color(T::TEXT));
                         ui.label(
-                            RichText::new("ESTUDIO DE IMÁGENES")
+                            RichText::new("IMAGE TOOLBOX")
                                 .size(8.5)
                                 .color(T::TEXT_FAINT),
                         );
@@ -606,7 +646,9 @@ impl HunkApp {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if self.source.is_some() {
                             let reset = egui::Button::new(
-                                RichText::new("Reiniciar").size(11.5).color(T::TEXT_MUTED),
+                                RichText::new(self.t(K::Reset))
+                                    .size(11.5)
+                                    .color(T::TEXT_MUTED),
                             )
                             .fill(Color32::TRANSPARENT)
                             .stroke(Stroke::new(1.0, T::BORDER))
@@ -615,6 +657,27 @@ impl HunkApp {
                             if ui.add(reset).clicked() {
                                 self.reset(&ctx);
                             }
+                        }
+
+                        let mut language = self.language;
+                        egui::ComboBox::from_id_salt("language_selector")
+                            .selected_text(
+                                RichText::new(language.short())
+                                    .size(11.0)
+                                    .color(T::TEXT_MUTED),
+                            )
+                            .width(64.0)
+                            .show_ui(ui, |ui| {
+                                for option in Lang::ALL {
+                                    ui.selectable_value(&mut language, option, option.name());
+                                }
+                            })
+                            .response
+                            .on_hover_text(self.t(K::Language));
+                        if language != self.language {
+                            self.language = language;
+                            self.save_settings();
+                            ctx.request_repaint();
                         }
                     });
                 });
@@ -631,12 +694,15 @@ impl HunkApp {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     ui.label(
-                        RichText::new("Rust + egui · open source · sin conexión")
-                            .size(9.5)
-                            .color(T::TEXT_FAINT),
+                        RichText::new(format!(
+                            "Rust + egui · Open Source · v{}",
+                            env!("CARGO_PKG_VERSION")
+                        ))
+                        .size(9.5)
+                        .color(T::TEXT_FAINT),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(RichText::new("v0.2.0 · MIT").size(9.5).color(T::TEXT_FAINT));
+                        ui.label(RichText::new("MIT").size(9.5).color(T::TEXT_FAINT));
                     });
                 });
             });
@@ -668,12 +734,11 @@ impl HunkApp {
                     ui.set_min_height(ui.available_height());
                     ui.set_width(ui.available_width());
 
-                    // Reserva espacio para el cuentagotas y la exportación.
-                    let top_height = (ui.available_height() - 260.0).max(160.0);
+                    let scroll_height = (ui.available_height() - 70.0).max(200.0);
                     egui::ScrollArea::vertical()
                         .id_salt("sidebar_scroll")
                         .auto_shrink([false, false])
-                        .max_height(top_height)
+                        .max_height(scroll_height)
                         .show(ui, |ui| {
                             ui.set_width(ui.available_width());
                             self.show_sidebar_top(
@@ -685,11 +750,11 @@ impl HunkApp {
                                 file_size,
                                 dimensions,
                             );
+                            ui.add_space(6.0);
+                            self.show_color_panel(ui, &ctx);
                         });
 
-                    ui.add_space(6.0);
-                    self.show_color_panel(ui, &ctx);
-                    ui.add_space(8.0);
+                    ui.add_space(4.0);
                     self.show_export(ui);
                 });
             });
@@ -708,15 +773,10 @@ impl HunkApp {
     ) {
         let mut change_requested = false;
         ui.horizontal(|ui| {
-            ui.label(T::eyebrow("IMAGEN"));
+            ui.label(T::eyebrow(self.t(K::Image)));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let button =
-                    egui::Button::new(RichText::new("Cambiar").size(10.5).color(T::TEXT_MUTED))
-                        .frame(false);
-                let response = ui
-                    .add(button)
-                    .on_hover_cursor(CursorIcon::PointingHand)
-                    .on_hover_text("Seleccionar otra imagen");
+                let response = small_text_button(ui, self.t(K::Change))
+                    .on_hover_text(self.t(K::ChangeTooltip));
                 if response.clicked() {
                     change_requested = true;
                 }
@@ -738,7 +798,7 @@ impl HunkApp {
                         file_format,
                         dimensions.0,
                         dimensions.1,
-                        format_bytes(file_size)
+                        i18n::localized_bytes(self.language, file_size)
                     ))
                     .size(9.5)
                     .color(T::TEXT_MUTED),
@@ -752,7 +812,7 @@ impl HunkApp {
         ui.add_space(6.0);
         hline(ui);
         ui.add_space(6.0);
-        ui.label(T::eyebrow("FORMATO DE SALIDA"));
+        ui.label(T::eyebrow(self.t(K::OutputFormat)));
         ui.add_space(6.0);
 
         let gap = 6.0;
@@ -761,7 +821,8 @@ impl HunkApp {
         for (row, formats) in OutputFormat::ALL.chunks(3).enumerate() {
             ui.horizontal(|ui| {
                 for (column, format) in formats.iter().enumerate() {
-                    if format_card(ui, *format, self.format, card_width).clicked() {
+                    let hint = i18n::format_hint(self.language, *format);
+                    if format_card(ui, *format, self.format, card_width, hint).clicked() {
                         requested_format = Some(*format);
                     }
                     if column + 1 < formats.len() {
@@ -788,17 +849,17 @@ impl HunkApp {
     fn show_quality(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let lossy = self.format.is_lossy();
         let hint = if lossy {
-            "Más calidad conserva más detalle y aumenta el peso."
+            self.t(K::QualityHint)
         } else {
-            "Este formato conserva todos los píxeles; no necesita ajuste de calidad."
+            self.t(K::LosslessHint)
         };
         let header = ui.horizontal(|ui| {
-            ui.label(T::eyebrow("CALIDAD"));
+            ui.label(T::eyebrow(self.t(K::Quality)));
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                 let value = if lossy {
                     format!("{} %", self.quality)
                 } else {
-                    "Sin pérdida".to_owned()
+                    self.t(K::Lossless).to_owned()
                 };
                 ui.label(RichText::new(value).size(12.0).color(T::TEXT));
             });
@@ -820,7 +881,7 @@ impl HunkApp {
     }
 
     fn show_ico_sizes(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.label(T::eyebrow("TAMAÑOS DEL ICONO"));
+        ui.label(T::eyebrow(self.t(K::IconSizes)));
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
             for (index, size) in ICO_SIZES.iter().enumerate() {
@@ -845,7 +906,7 @@ impl HunkApp {
                     let selected_count = self.ico_selected.iter().filter(|value| **value).count();
                     if selected && selected_count == 1 {
                         self.toast = Some(Toast {
-                            message: "Deja al menos un tamaño seleccionado.".to_owned(),
+                            message: self.t(K::SelectIcoSize).to_owned(),
                             error: true,
                             until: Instant::now() + Duration::from_secs(3),
                         });
@@ -858,7 +919,7 @@ impl HunkApp {
         });
         ui.add_space(4.0);
         ui.label(
-            RichText::new("Imagen centrada en un lienzo transparente, sin recortar.")
+            RichText::new(self.t(K::IcoCentered))
                 .size(9.5)
                 .color(T::TEXT_FAINT),
         );
@@ -867,39 +928,105 @@ impl HunkApp {
     fn show_color_panel(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
         let mut activate_eyedropper = false;
         let mut toggle_eyedropper = false;
-        let mut copy_text: Option<String> = None;
+        let mut copy_text: Option<(String, String)> = None;
+        let mut select_history = None;
+        let mut toggle_lock = None;
+        let mut clear_history = false;
         let icon_mode = self.format == OutputFormat::Ico;
         let sample = self.sampled_color;
         let sampled_position = self.sampled_position;
+        let history = self.history.clone();
+        let has_unlocked = history.iter().any(|entry| !entry.locked);
 
         T::soft_frame().show(ui, |ui| {
             ui.set_width(ui.available_width());
-            ui.spacing_mut().interact_size.y = 22.0;
+
             ui.horizontal(|ui| {
-                ui.label(T::eyebrow("CUENTAGOTAS"));
+                ui.label(T::eyebrow(self.t(K::History)));
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    let response = eyedropper_button(ui, self.eyedropper_active, !icon_mode);
-                    let hint = if icon_mode {
-                        "El cuentagotas está disponible en la vista de imagen."
-                    } else if self.eyedropper_active {
-                        "Desactivar el cuentagotas"
-                    } else {
-                        "Activar el cuentagotas · también puedes arrastrar hasta la imagen"
-                    };
-                    let response = response.on_hover_text(hint);
-                    if !icon_mode {
-                        if response.drag_started() {
-                            activate_eyedropper = true;
-                        } else if response.clicked() {
-                            toggle_eyedropper = true;
-                        }
+                    let response = icon_action_button(ui, IconAction::Trash, has_unlocked)
+                        .on_hover_text(self.t(K::ClearHistory));
+                    if has_unlocked && response.clicked() {
+                        clear_history = true;
                     }
                 });
             });
             ui.add_space(4.0);
 
+            let content_width = ui.available_width();
+            let rows = HISTORY_LIMIT.div_ceil(HISTORY_COLUMNS);
+            ui.spacing_mut().item_spacing = vec2(SWATCH_GAP, SWATCH_GAP);
+            for row in 0..rows {
+                let count = (HISTORY_LIMIT - row * HISTORY_COLUMNS).min(HISTORY_COLUMNS);
+                let row_width =
+                    count as f32 * SWATCH_SIZE + count.saturating_sub(1) as f32 * SWATCH_GAP;
+                let offset = ((content_width - row_width) * 0.5).max(0.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(offset);
+                    for column in 0..count {
+                        let index = row * HISTORY_COLUMNS + column;
+                        let entry = history.get(index);
+                        let (rect, response) =
+                            ui.allocate_exact_size(vec2(SWATCH_SIZE, SWATCH_SIZE), Sense::click());
+                        paint_history_swatch(ui.painter(), rect, entry, sample);
+                        if let Some(entry) = entry {
+                            let response = response
+                                .on_hover_cursor(CursorIcon::PointingHand)
+                                .on_hover_text(i18n::history_tooltip(
+                                    self.language,
+                                    &config::hex_rgba(entry.rgba),
+                                    entry.locked,
+                                ));
+                            if response.clicked() {
+                                select_history = Some(entry.rgba);
+                            } else if response.clicked_by(egui::PointerButton::Secondary) {
+                                toggle_lock = Some(index);
+                            }
+                        }
+                    }
+                });
+                if row + 1 < rows {
+                    ui.add_space(SWATCH_GAP);
+                }
+            }
+            ui.add_space(4.0);
+            hline(ui);
+            ui.add_space(4.0);
+
+            ui.spacing_mut().interact_size.y = 20.0;
             ui.horizontal(|ui| {
-                let (rect, _) = ui.allocate_exact_size(vec2(36.0, 26.0), Sense::hover());
+                ui.label(T::eyebrow(self.t(K::Eyedropper)));
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let response = eyedropper_button(
+                        ui,
+                        self.eyedropper_active,
+                        !icon_mode,
+                        self.t(K::Eyedropper),
+                    );
+                    let hint = if icon_mode {
+                        self.t(K::EyedropperUnavailable)
+                    } else if self.eyedropper_active {
+                        self.t(K::DisableEyedropper)
+                    } else {
+                        self.t(K::EnableEyedropper)
+                    };
+                    let response = response.on_hover_text(hint);
+                    if !icon_mode {
+                        if response.drag_started() {
+                            activate_eyedropper = true;
+                        } else if response.clicked()
+                            || (self.eyedropper_active
+                                && response.clicked_by(egui::PointerButton::Secondary))
+                        {
+                            toggle_eyedropper = true;
+                        }
+                    }
+                });
+            });
+            ui.add_space(3.0);
+
+            ui.horizontal(|ui| {
+                let (rect, _) = ui.allocate_exact_size(vec2(36.0, 24.0), Sense::hover());
                 let painter = ui.painter();
                 paint_checker(painter, rect);
                 if let Some(rgba) = sample {
@@ -918,33 +1045,34 @@ impl HunkApp {
                 ui.add_space(2.0);
                 ui.vertical(|ui| {
                     let message = if icon_mode {
-                        "Cambia a WebP, JPG o PNG para muestrear."
+                        self.t(K::EyedropperIcoHint)
                     } else if self.eyedropper_active {
                         if sample.is_some() {
-                            "Muestra capturada · elige otro píxel."
+                            self.t(K::SampleCapturedChoose)
                         } else {
-                            "Haz clic o arrastra sobre la imagen."
+                            self.t(K::SampleClickOrDrag)
                         }
+                    } else if sample.is_some() && sampled_position.is_none() {
+                        self.t(K::SampleFromHistory)
                     } else if sample.is_some() {
-                        "Muestra capturada."
+                        self.t(K::SampleCaptured)
                     } else {
-                        "Pulsa el cuentagotas y elige un píxel."
+                        self.t(K::EyedropperIdle)
                     };
                     ui.label(RichText::new(message).size(9.5).color(T::TEXT_MUTED));
                     if let Some((x, y)) = sampled_position {
                         ui.label(
-                            RichText::new(format!("píxel {x} · {y}"))
+                            RichText::new(i18n::pixel_coords(self.language, x, y))
                                 .font(FontId::monospace(8.5))
                                 .color(T::TEXT_FAINT),
                         );
                     }
                 });
             });
-            ui.add_space(4.0);
+            ui.add_space(2.0);
 
-            ui.spacing_mut().interact_size.y = 16.0;
-            ui.spacing_mut().item_spacing.y = 3.0;
-            ui.spacing_mut().button_padding = vec2(4.0, 1.0);
+            ui.spacing_mut().interact_size.y = 14.0;
+            ui.spacing_mut().item_spacing.y = 1.0;
             let codes = sample.map(color::color_codes).unwrap_or_else(|| {
                 [
                     ("HEX", "—".to_owned()),
@@ -962,19 +1090,50 @@ impl HunkApp {
                             .color(T::TEXT_MUTED),
                     );
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let copy = egui::Button::new(
-                            RichText::new("Copiar").size(9.0).color(T::TEXT_FAINT),
-                        )
-                        .frame(false);
-                        let response = ui.add_enabled(sample.is_some(), copy);
-                        if response.clicked() {
-                            copy_text = Some(value.clone());
+                        let response = icon_action_button(ui, IconAction::Copy, sample.is_some())
+                            .on_hover_text(i18n::copy_tooltip(self.language, label));
+                        if sample.is_some() && response.clicked() {
+                            copy_text = Some((label.to_owned(), value.clone()));
                         }
                     });
                 });
             }
         });
 
+        if let Some(rgba) = select_history {
+            self.sampled_color = Some(rgba);
+            self.sampled_position = None;
+            self.eyedropper_active = false;
+            self.sample_pending_history = false;
+            ctx.request_repaint();
+        }
+        if let Some(index) = toggle_lock
+            && let Some(entry) = self.history.get_mut(index)
+        {
+            entry.locked = !entry.locked;
+            let key = if entry.locked {
+                K::ColorPinned
+            } else {
+                K::ColorUnpinned
+            };
+            self.toast = Some(Toast {
+                message: self.t(key).to_owned(),
+                error: false,
+                until: Instant::now() + Duration::from_secs(2),
+            });
+            self.save_settings();
+            ctx.request_repaint();
+        }
+        if clear_history {
+            self.history.retain(|entry| entry.locked);
+            self.save_settings();
+            self.toast = Some(Toast {
+                message: self.t(K::HistoryCleared).to_owned(),
+                error: false,
+                until: Instant::now() + Duration::from_secs(2),
+            });
+            ctx.request_repaint();
+        }
         if activate_eyedropper {
             self.eyedropper_active = true;
             ctx.request_repaint();
@@ -982,14 +1141,20 @@ impl HunkApp {
             self.eyedropper_active = !self.eyedropper_active;
             ctx.request_repaint();
         }
-        if let Some(text) = copy_text {
+        if let Some((label, text)) = copy_text {
             ctx.copy_text(text);
+            self.toast = Some(Toast {
+                message: i18n::copied_message(self.language, &label),
+                error: false,
+                until: Instant::now() + Duration::from_secs(2),
+            });
+            ctx.request_repaint();
         }
     }
 
     fn show_export(&mut self, ui: &mut egui::Ui) {
         let enabled = self.can_export();
-        let label = format!("Exportar .{}", self.format.extension());
+        let label = i18n::export_label(self.language, self.format.extension());
         let button = egui::Button::new(
             RichText::new(&label)
                 .size(13.0)
@@ -1012,9 +1177,9 @@ impl HunkApp {
         }
         ui.add_space(4.0);
         let hint = if self.busy() {
-            "Calculando el resultado…"
+            self.t(K::Calculating)
         } else {
-            "Se guarda en export/, junto a la app.  Ctrl+E"
+            self.t(K::ExportHint)
         };
         ui.label(RichText::new(hint).size(9.0).color(T::TEXT_FAINT));
     }
@@ -1043,7 +1208,7 @@ impl HunkApp {
                     });
 
                 ui.horizontal(|ui| {
-                    ui.label(RichText::new("Vista previa").size(17.0).color(T::TEXT));
+                    ui.label(RichText::new(self.t(K::Preview)).size(17.0).color(T::TEXT));
                     ui.add_space(4.0);
                     if self.format != OutputFormat::Ico {
                         ui.add_space(2.0);
@@ -1055,7 +1220,7 @@ impl HunkApp {
                                     .color(T::ACCENT),
                             )
                             .frame(false);
-                            if ui.add(reset).on_hover_text("Restablecer zoom").clicked() {
+                            if ui.add(reset).on_hover_text(self.t(K::ResetZoom)).clicked() {
                                 self.zoom = MIN_ZOOM;
                                 self.pan = Vec2::ZERO;
                                 ctx.request_repaint();
@@ -1067,30 +1232,32 @@ impl HunkApp {
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if self.busy() {
                             ui.add(egui::Spinner::new().size(12.0).color(T::ACCENT));
-                            ui.label(RichText::new("Procesando…").size(9.5).color(T::TEXT_MUTED));
+                            ui.label(
+                                RichText::new(self.t(K::Processing))
+                                    .size(9.5)
+                                    .color(T::TEXT_MUTED),
+                            );
                         } else if self.eyedropper_active {
                             ui.label(
-                                RichText::new(
-                                    "Cuentagotas activo · haz clic o arrastra sobre la imagen",
-                                )
-                                .size(9.5)
-                                .color(T::ACCENT),
+                                RichText::new(self.t(K::EyedropperActiveHint))
+                                    .size(9.5)
+                                    .color(T::ACCENT),
                             );
                         } else if self.format == OutputFormat::Ico {
                             ui.label(
-                                RichText::new("Vista del icono generado")
+                                RichText::new(self.t(K::IcoGeneratedView))
                                     .size(9.5)
                                     .color(T::TEXT_FAINT),
                             );
                         } else if self.zoom > MIN_ZOOM + 0.001 {
                             ui.label(
-                                RichText::new("Rueda: zoom · clic derecho: mover")
+                                RichText::new(self.t(K::PanZoomHint))
                                     .size(9.5)
                                     .color(T::TEXT_FAINT),
                             );
                         } else {
                             ui.label(
-                                RichText::new("Arrastra el divisor · rueda para zoom")
+                                RichText::new(self.t(K::DividerZoomHint))
                                     .size(9.5)
                                     .color(T::TEXT_FAINT),
                             );
@@ -1152,7 +1319,7 @@ impl HunkApp {
                     painter,
                     pos2(icon_rect.right() - 10.0, icon_rect.top() + 10.0),
                     Align2::RIGHT_TOP,
-                    &format!("ICO · {} TAMAÑOS", result.frame_count),
+                    i18n::ico_badge(self.language, result.frame_count).as_str(),
                     T::ACCENT,
                     T::ACCENT_INK,
                 );
@@ -1160,7 +1327,7 @@ impl HunkApp {
                 painter.text(
                     area.center(),
                     Align2::CENTER_CENTER,
-                    "Generando icono…",
+                    self.t(K::GeneratingIcon),
                     FontId::proportional(13.0),
                     T::TEXT_FAINT,
                 );
@@ -1173,6 +1340,13 @@ impl HunkApp {
         let mut image_rect = self.view_rect(fit_rect, area);
 
         let pointer = ctx.input(|input| input.pointer.hover_pos());
+        let right_clicked =
+            ctx.input(|input| input.pointer.button_pressed(egui::PointerButton::Secondary));
+        let deactivated_eyedropper = self.eyedropper_active && right_clicked;
+        if deactivated_eyedropper {
+            self.eyedropper_active = false;
+            self.sample_pending_history = false;
+        }
         if response.hovered()
             && let Some(position) = pointer
             && image_rect.contains(position)
@@ -1183,7 +1357,10 @@ impl HunkApp {
                 image_rect = self.view_rect(fit_rect, area);
             }
         }
-        if response.dragged_by(egui::PointerButton::Secondary) && self.zoom > MIN_ZOOM {
+        if !deactivated_eyedropper
+            && response.dragged_by(egui::PointerButton::Secondary)
+            && self.zoom > MIN_ZOOM
+        {
             let delta = ctx.input(|input| input.pointer.delta());
             self.pan += delta;
             self.clamp_pan(fit_rect, area);
@@ -1227,6 +1404,7 @@ impl HunkApp {
                 let pixel = source_pixels.get_pixel(x, y);
                 self.sampled_color = Some(pixel.0);
                 self.sampled_position = Some((x, y));
+                self.sample_pending_history = true;
             }
         } else {
             if result_texture.is_some()
@@ -1247,6 +1425,13 @@ impl HunkApp {
                     CursorIcon::Grab
                 });
             }
+        }
+
+        if self.sample_pending_history && ctx.input(|input| input.pointer.primary_released()) {
+            if let Some(rgba) = self.sampled_color {
+                self.remember_color(rgba);
+            }
+            self.sample_pending_history = false;
         }
 
         if let Some(texture_id) = result_texture {
@@ -1307,7 +1492,7 @@ impl HunkApp {
             canvas.text(
                 view_rect.center(),
                 Align2::CENTER_CENTER,
-                "Preparando resultado…",
+                self.t(K::PreparingResult),
                 FontId::proportional(13.0),
                 T::TEXT_FAINT,
             );
@@ -1346,7 +1531,7 @@ impl HunkApp {
             &canvas,
             view_rect.right_top() + vec2(-10.0, 10.0),
             Align2::RIGHT_TOP,
-            "ORIGINAL",
+            self.t(K::Original),
             Color32::from_rgba_unmultiplied(10, 13, 16, 225),
             T::TEXT,
         );
@@ -1360,22 +1545,22 @@ impl HunkApp {
             .map(|result| result.size);
 
         ui.horizontal(|ui| {
-            ui.label(T::eyebrow("ORIGINAL"));
+            ui.label(T::eyebrow(self.t(K::Original)));
             ui.label(
                 RichText::new(
                     source_size
-                        .map(format_bytes)
+                        .map(|bytes| i18n::localized_bytes(self.language, bytes))
                         .unwrap_or_else(|| "—".to_owned()),
                 )
                 .size(11.5)
                 .color(T::TEXT),
             );
             T::bullet_separator(ui);
-            ui.label(T::eyebrow("RESULTADO"));
+            ui.label(T::eyebrow(self.t(K::Result)));
             ui.label(
                 RichText::new(
                     output_size
-                        .map(format_bytes)
+                        .map(|bytes| i18n::localized_bytes(self.language, bytes))
                         .unwrap_or_else(|| "—".to_owned()),
                 )
                 .size(11.5)
@@ -1390,7 +1575,7 @@ impl HunkApp {
                 } else if change < -0.5 {
                     (format!("+{:.0} %", change.abs()), T::TEXT_MUTED)
                 } else {
-                    ("= peso".to_owned(), T::TEXT_MUTED)
+                    (self.t(K::EqualWeight).to_owned(), T::TEXT_MUTED)
                 };
                 ui.add_space(6.0);
                 ui.label(RichText::new(text).size(9.5).color(color));
@@ -1426,21 +1611,19 @@ impl HunkApp {
                             }
                             ui.add_space(14.0);
                             ui.label(
-                                RichText::new("Suelta una imagen.\nHazla tuya.")
+                                RichText::new(self.t(K::EmptyTitle))
                                     .size(34.0)
                                     .color(T::TEXT),
                             );
                             ui.add_space(12.0);
                             ui.label(
-                                RichText::new(
-                                    "Convierte, comprime y exporta sin salir de tu equipo.",
-                                )
-                                .size(12.5)
-                                .color(T::TEXT_MUTED),
+                                RichText::new(self.t(K::EmptySubtitle))
+                                    .size(12.5)
+                                    .color(T::TEXT_MUTED),
                             );
                             ui.add_space(22.0);
                             let choose = egui::Button::new(
-                                RichText::new("Seleccionar una imagen")
+                                RichText::new(self.t(K::SelectImage))
                                     .size(13.5)
                                     .color(T::ACCENT_INK)
                                     .strong(),
@@ -1461,11 +1644,9 @@ impl HunkApp {
                             );
                             ui.add_space(2.0);
                             ui.label(
-                                RichText::new(
-                                    "Nada se sube a internet. Nada sale de esta ventana.",
-                                )
-                                .size(9.5)
-                                .color(T::TEXT_FAINT),
+                                RichText::new(self.t(K::PrivacyNote))
+                                    .size(9.5)
+                                    .color(T::TEXT_FAINT),
                             );
                         });
                     });
@@ -1614,7 +1795,12 @@ impl eframe::App for HunkApp {
     }
 }
 
-fn eyedropper_button(ui: &mut egui::Ui, active: bool, enabled: bool) -> egui::Response {
+fn eyedropper_button(
+    ui: &mut egui::Ui,
+    active: bool,
+    enabled: bool,
+    label: &str,
+) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(32.0, 28.0), Sense::click_and_drag());
     let hovered = enabled && response.hovered();
     let fill = if active && enabled {
@@ -1648,7 +1834,7 @@ fn eyedropper_button(ui: &mut egui::Ui, active: bool, enabled: bool) -> egui::Re
         StrokeKind::Inside,
     );
     paint_eyedropper(painter, rect.shrink2(vec2(8.0, 6.0)), icon);
-    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, "Cuentagotas"));
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
 
     if enabled {
         response.on_hover_cursor(CursorIcon::PointingHand)
@@ -1706,11 +1892,200 @@ fn pointer_over_split(image_rect: Rect, split_x: f32, pointer: egui::Pos2) -> bo
     over_line || over_circle
 }
 
+#[derive(Clone, Copy)]
+enum IconAction {
+    Copy,
+    Trash,
+}
+
+fn icon_action_button(ui: &mut egui::Ui, action: IconAction, enabled: bool) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(vec2(22.0, 20.0), Sense::click());
+    let hovered = enabled && response.hovered();
+    if hovered {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(5), T::SURFACE_3);
+    }
+    let color = if !enabled {
+        T::TEXT_FAINT
+    } else if hovered {
+        T::TEXT
+    } else {
+        T::TEXT_MUTED
+    };
+    match action {
+        IconAction::Copy => paint_copy_icon(ui.painter(), rect, color),
+        IconAction::Trash => paint_trash_icon(ui.painter(), rect, color),
+    }
+    if enabled {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    }
+}
+
+fn paint_copy_icon(painter: &egui::Painter, rect: Rect, color: Color32) {
+    let body = Rect::from_center_size(rect.center() + vec2(0.0, 1.0), vec2(10.0, 12.0));
+    painter.rect_stroke(
+        body,
+        CornerRadius::same(2),
+        Stroke::new(1.2, color),
+        StrokeKind::Inside,
+    );
+    let clip = Rect::from_center_size(body.center_top() + vec2(0.0, 1.0), vec2(5.0, 3.0));
+    painter.rect_filled(clip, CornerRadius::same(1), color);
+    for offset in [-2.0_f32, 2.0] {
+        painter.line_segment(
+            [
+                pos2(body.left() + 2.5, body.center().y + offset),
+                pos2(body.right() - 2.5, body.center().y + offset),
+            ],
+            Stroke::new(1.0, color),
+        );
+    }
+}
+
+fn paint_trash_icon(painter: &egui::Painter, rect: Rect, color: Color32) {
+    let center = rect.center();
+    painter.line_segment(
+        [
+            pos2(center.x - 6.0, center.y - 5.0),
+            pos2(center.x + 6.0, center.y - 5.0),
+        ],
+        Stroke::new(1.3, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x - 2.5, center.y - 7.0),
+            pos2(center.x + 2.5, center.y - 7.0),
+        ],
+        Stroke::new(1.3, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x - 4.5, center.y - 3.0),
+            pos2(center.x - 3.5, center.y + 7.0),
+        ],
+        Stroke::new(1.2, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x + 4.5, center.y - 3.0),
+            pos2(center.x + 3.5, center.y + 7.0),
+        ],
+        Stroke::new(1.2, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x - 3.5, center.y + 7.0),
+            pos2(center.x + 3.5, center.y + 7.0),
+        ],
+        Stroke::new(1.2, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x - 1.0, center.y - 1.0),
+            pos2(center.x - 0.5, center.y + 4.0),
+        ],
+        Stroke::new(1.0, color),
+    );
+    painter.line_segment(
+        [
+            pos2(center.x + 1.0, center.y - 1.0),
+            pos2(center.x + 0.5, center.y + 4.0),
+        ],
+        Stroke::new(1.0, color),
+    );
+}
+
+fn paint_history_swatch(
+    painter: &egui::Painter,
+    rect: Rect,
+    entry: Option<&HistoryEntry>,
+    selected: Option<[u8; 4]>,
+) {
+    let radius = CornerRadius::same(7);
+    if let Some(entry) = entry {
+        paint_checker(painter, rect);
+        painter.rect_filled(
+            rect,
+            radius,
+            Color32::from_rgba_unmultiplied(
+                entry.rgba[0],
+                entry.rgba[1],
+                entry.rgba[2],
+                entry.rgba[3],
+            ),
+        );
+        painter.rect_stroke(
+            rect,
+            radius,
+            Stroke::new(
+                if entry.locked { 1.8 } else { 1.0 },
+                if entry.locked {
+                    T::ACCENT
+                } else {
+                    T::BORDER_STRONG
+                },
+            ),
+            StrokeKind::Inside,
+        );
+        if selected == Some(entry.rgba) {
+            painter.rect_stroke(
+                rect.expand(2.0),
+                CornerRadius::same(9),
+                Stroke::new(2.0, T::ACCENT),
+                StrokeKind::Outside,
+            );
+        }
+        if entry.locked {
+            paint_lock_badge(painter, rect);
+        }
+    } else {
+        painter.rect(
+            rect,
+            radius,
+            T::SURFACE_2,
+            Stroke::new(1.0, T::BORDER),
+            StrokeKind::Inside,
+        );
+    }
+}
+
+fn paint_lock_badge(painter: &egui::Painter, rect: Rect) {
+    let center = rect.right_bottom() + vec2(-6.0, -6.0);
+    painter.circle_filled(center, 6.0, Color32::from_black_alpha(190));
+    let body = Rect::from_center_size(center + vec2(0.0, 1.0), vec2(5.5, 4.0));
+    painter.rect_filled(body, CornerRadius::same(1), T::ACCENT);
+    let shackle = Rect::from_center_size(center + vec2(0.0, -1.8), vec2(3.2, 3.2));
+    painter.line_segment(
+        [
+            pos2(shackle.left(), shackle.center().y),
+            pos2(shackle.left(), shackle.top()),
+        ],
+        Stroke::new(0.9, T::ACCENT),
+    );
+    painter.line_segment(
+        [
+            pos2(shackle.left(), shackle.top()),
+            pos2(shackle.right(), shackle.top()),
+        ],
+        Stroke::new(0.9, T::ACCENT),
+    );
+    painter.line_segment(
+        [
+            pos2(shackle.right(), shackle.top()),
+            pos2(shackle.right(), shackle.center().y),
+        ],
+        Stroke::new(0.9, T::ACCENT),
+    );
+}
+
 fn format_card(
     ui: &mut egui::Ui,
     format: OutputFormat,
     current: OutputFormat,
     width: f32,
+    hint: &str,
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(width, 50.0), Sense::click());
     let selected = format == current;
@@ -1749,11 +2124,35 @@ fn format_card(
     ui.painter().text(
         rect.left_bottom() + vec2(10.0, -10.0),
         Align2::LEFT_BOTTOM,
-        format.hint(),
+        hint,
         FontId::proportional(9.5),
         if selected { T::ACCENT } else { T::TEXT_FAINT },
     );
     response.on_hover_cursor(CursorIcon::PointingHand)
+}
+
+fn small_text_button(ui: &mut egui::Ui, label: &str) -> egui::Response {
+    let font = FontId::proportional(10.5);
+    let galley = ui
+        .painter()
+        .layout_no_wrap(label.to_owned(), font, T::TEXT_MUTED);
+    let size = vec2(galley.size().x + 18.0, 26.0);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    let hovered = response.hovered();
+    if hovered {
+        ui.painter()
+            .rect_filled(rect, CornerRadius::same(8), T::SURFACE_3);
+    }
+    ui.painter().galley(
+        rect.center() - galley.size() * 0.5,
+        galley,
+        if hovered { T::TEXT } else { T::TEXT_MUTED },
+    );
+    if hovered {
+        response.on_hover_cursor(CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 fn hline(ui: &mut egui::Ui) {

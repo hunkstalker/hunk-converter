@@ -59,17 +59,6 @@ impl OutputFormat {
         }
     }
 
-    pub fn hint(self) -> &'static str {
-        match self {
-            Self::Webp => "Equilibrio",
-            Self::Jpg => "Compatible",
-            Self::Png => "Sin pérdida",
-            Self::Ico => "Windows",
-            Self::Avif => "Moderno",
-            Self::Jxl => "Sin pérdida",
-        }
-    }
-
     pub fn extension(self) -> &'static str {
         match self {
             Self::Webp => "webp",
