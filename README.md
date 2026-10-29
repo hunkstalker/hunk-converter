@@ -24,7 +24,7 @@ Todo el procesamiento ocurre en tu ordenador: no hay cuentas, subidas ni conexi�
 - **Códigos simultáneos:** HEX, RGB, RGBA y HSL, con botones de copia y confirmación visual.
 - **Historial de colores:** 21 colores en tres filas de siete, con bloqueo y limpieza.
 - **Idiomas:** español, catalán e inglés, con detección del sistema y preferencia guardada.
-- **Pantalla completa:** se abre así por defecto; `F11` o el icono de la cabecera la alternan y el estado se guarda.
+- **Ventana maximizada:** se abre maximizada; el icono de la cabecera maximiza o restaura y el estado se guarda.
 - **Exportación ICO** con selección de 16, 32, 48, 64, 128 y 256 px en un solo archivo.
 - **PNG y JPEG XL sin pérdida**, con transparencia conservada en WebP/AVIF/PNG/JPEG XL/ICO.
 - **JPG sobre fondo blanco** cuando la imagen tiene transparencia.
@@ -61,7 +61,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 
 - Selector **ES / CA / EN** en la cabecera.
 - En el primer arranque se detecta el idioma del sistema.
-- El idioma elegido, el historial, los bloqueos y el estado de pantalla completa se guardan en `config.ini`, junto al ejecutable.
+- El idioma elegido, el historial, los bloqueos y el estado maximizado se guardan en `config.ini`, junto al ejecutable.
 - Si no se puede escribir el archivo, la aplicación sigue funcionando sin persistencia.
 
 ## Zoom y navegación
@@ -116,7 +116,6 @@ El archivo aparece en `export/`, junto a la aplicación. Si el nombre existe, se
 | `Ctrl+V` | Pegar una imagen del portapapeles |
 | `Ctrl+E` | Exportar |
 | `Ctrl+R` | Reiniciar la aplicación |
-| `F11` | Alternar pantalla completa |
 | `←` / `→` | Mover el divisor del comparador |
 | `Inicio` / `Fin` | Llevar el divisor a un extremo |
 

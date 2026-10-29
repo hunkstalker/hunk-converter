@@ -18,15 +18,15 @@ fn main() -> eframe::Result {
         .unwrap_or([1280.0, 800.0]);
     let mut settings = config::Settings::load();
     let windowed = std::env::var_os("HUNK_WINDOWED").is_some();
-    let fullscreen = settings.fullscreen && !windowed;
-    settings.fullscreen = fullscreen;
+    let maximized = settings.maximized && !windowed;
+    settings.maximized = maximized;
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Hunk Converter · Image Toolbox")
             .with_inner_size(inner_size)
             .with_min_inner_size([1024.0, 800.0])
-            .with_fullscreen(fullscreen)
+            .with_maximized(maximized)
             .with_icon(icon),
         renderer: eframe::Renderer::Glow,
         centered: true,

@@ -122,9 +122,9 @@
 **Completada:** 2026-10-29
 **Resultado:** Cabecera «Hunk Converter / IMAGE TOOLBOX», pie «Rust + egui · Open Source · v0.2.0», icono SVG original de máscara de gas rasterizado a PNG y usado en la ventana y la cabecera.
 
-## t-29 — Pantalla completa persistente
+## t-29 — Ventana maximizada persistente
 
-**Descripción:** Abrir la aplicación en pantalla completa por defecto, permitir alternar el modo con un botón y `F11`, y guardar el estado en `config.ini`.
+**Descripción:** Abrir la aplicación con la ventana maximizada por defecto, permitir maximizar o restaurar con un botón y guardar el estado en `config.ini`.
 
 **Completada:** 2026-10-29
-**Resultado:** La app arranca en pantalla completa salvo que `config.ini` indique lo contrario. El icono de la cabecera y `F11` alternan el modo y guardan el estado. En desarrollo, `HUNK_WINDOWED=1` fuerza una ventana normal.
+**Resultado:** La app arranca con la ventana maximizada salvo que `config.ini` indique lo contrario. El icono de la cabecera maximiza o restaura y guarda el estado. En desarrollo, `HUNK_WINDOWED=1` fuerza una ventana normal.

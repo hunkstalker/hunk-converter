@@ -14,7 +14,7 @@ pub struct HistoryEntry {
 pub struct Settings {
     pub language: Lang,
     pub history: Vec<HistoryEntry>,
-    pub fullscreen: bool,
+    pub maximized: bool,
 }
 
 impl Default for Settings {
@@ -22,7 +22,7 @@ impl Default for Settings {
         Self {
             language: Lang::detect(),
             history: Vec::new(),
-            fullscreen: true,
+            maximized: true,
         }
     }
 }
@@ -58,9 +58,10 @@ impl Settings {
         let mut settings = Self {
             language: Lang::detect(),
             history: Vec::new(),
-            fullscreen: true,
+            maximized: true,
         };
         let mut section = String::new();
+        let mut maximized_seen = false;
         for line in text.lines() {
             let line = line.trim();
             if line.is_empty() || line.starts_with(';') || line.starts_with('#') {
@@ -79,8 +80,12 @@ impl Settings {
                 if let Some(language) = Lang::from_code(value) {
                     settings.language = language;
                 }
-            } else if section == "general" && key == "fullscreen" {
-                settings.fullscreen =
+            } else if section == "general" && key == "maximized" {
+                settings.maximized =
+                    !matches!(value.to_ascii_lowercase().as_str(), "0" | "false" | "no");
+                maximized_seen = true;
+            } else if section == "general" && key == "fullscreen" && !maximized_seen {
+                settings.maximized =
                     !matches!(value.to_ascii_lowercase().as_str(), "0" | "false" | "no");
             } else if section == "history"
                 && let Some(index) = key
@@ -103,9 +108,9 @@ impl Settings {
     pub fn save(&self) {
         let mut text = String::from("[general]\n");
         text.push_str(&format!(
-            "language={}\nfullscreen={}\n\n[history]\n",
+            "language={}\nmaximized={}\n\n[history]\n",
             self.language.code(),
-            u8::from(self.fullscreen)
+            u8::from(self.maximized)
         ));
         text.push_str(&format!("count={}\n", self.history.len()));
         for (index, entry) in self.history.iter().take(HISTORY_LIMIT).enumerate() {

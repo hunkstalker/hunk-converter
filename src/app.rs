@@ -31,7 +31,7 @@ pub struct HunkApp {
     brand_icon: Option<TextureHandle>,
     language: Lang,
     history: Vec<HistoryEntry>,
-    fullscreen: bool,
+    maximized: bool,
     sample_pending_history: bool,
     color_panel_height: f32,
     format: OutputFormat,
@@ -112,7 +112,7 @@ impl HunkApp {
             brand_icon,
             language: settings.language,
             history: settings.history,
-            fullscreen: settings.fullscreen,
+            maximized: settings.maximized,
             sample_pending_history: false,
             color_panel_height: 300.0,
             format: OutputFormat::Webp,
@@ -163,14 +163,14 @@ impl HunkApp {
         config::Settings {
             language: self.language,
             history: self.history.clone(),
-            fullscreen: self.fullscreen,
+            maximized: self.maximized,
         }
         .save();
     }
 
-    fn set_fullscreen(&mut self, ctx: &egui::Context, fullscreen: bool) {
-        self.fullscreen = fullscreen;
-        ctx.send_viewport_cmd(ViewportCommand::Fullscreen(fullscreen));
+    fn set_maximized(&mut self, ctx: &egui::Context, maximized: bool) {
+        self.maximized = maximized;
+        ctx.send_viewport_cmd(ViewportCommand::Maximized(maximized));
         self.save_settings();
         ctx.request_repaint();
     }
@@ -691,14 +691,14 @@ impl HunkApp {
                             ctx.request_repaint();
                         }
 
-                        let response = fullscreen_button(ui, self.fullscreen);
-                        let hint = if self.fullscreen {
-                            self.t(K::ExitFullscreen)
+                        let response = maximize_button(ui, self.maximized);
+                        let hint = if self.maximized {
+                            self.t(K::RestoreWindow)
                         } else {
-                            self.t(K::Fullscreen)
+                            self.t(K::MaximizeWindow)
                         };
                         if response.on_hover_text(hint).clicked() {
-                            self.set_fullscreen(&ctx, !self.fullscreen);
+                            self.set_maximized(&ctx, !self.maximized);
                         }
                     });
                 });
@@ -1793,10 +1793,6 @@ impl eframe::App for HunkApp {
             ctx.request_repaint();
         }
 
-        if ctx.input(|input| input.key_pressed(egui::Key::F11)) {
-            self.set_fullscreen(&ctx, !self.fullscreen);
-        }
-
         let (export_shortcut, reset_shortcut, open_shortcut) = ctx.input(|input| {
             let command = input.modifiers.command;
             (
@@ -2171,7 +2167,7 @@ fn format_card(
     response.on_hover_cursor(CursorIcon::PointingHand)
 }
 
-fn fullscreen_button(ui: &mut egui::Ui, fullscreen: bool) -> egui::Response {
+fn maximize_button(ui: &mut egui::Ui, maximized: bool) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(vec2(28.0, 26.0), Sense::click());
     let hovered = response.hovered();
     if hovered {
@@ -2180,14 +2176,14 @@ fn fullscreen_button(ui: &mut egui::Ui, fullscreen: bool) -> egui::Response {
     }
     let color = if hovered { T::TEXT } else { T::TEXT_MUTED };
     let inner = rect.shrink(7.0);
-    let length = if fullscreen { 3.5 } else { 5.0 };
+    let length = if maximized { 3.5 } else { 5.0 };
     for (corner, dx, dy) in [
         (inner.left_top(), 1.0, 1.0),
         (inner.right_top(), -1.0, 1.0),
         (inner.left_bottom(), 1.0, -1.0),
         (inner.right_bottom(), -1.0, -1.0),
     ] {
-        let corner = if fullscreen {
+        let corner = if maximized {
             corner + vec2(dx * 3.0, dy * 3.0)
         } else {
             corner

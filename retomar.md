@@ -28,8 +28,8 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación.
 - Historial de 21 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
-- Idioma, historial, bloqueos y pantalla completa se guardan en `config.ini`, junto al ejecutable.
-- La aplicación se abre en pantalla completa; `F11` o el icono de la cabecera alternan el modo.
+- Idioma, historial, bloqueos y estado maximizado se guardan en `config.ini`, junto al ejecutable.
+- La aplicación se abre con la ventana maximizada; el icono de la cabecera maximiza o restaura.
 - Icono propio de máscara de gas y marca **Hunk Converter / IMAGE TOOLBOX**.
 - Exportación directa a `export/`, sin sobrescribir y con nombres saneados.
 - Procesamiento en hilo aparte con debounce y descarte de resultados obsoletos.
@@ -72,7 +72,7 @@ Builds portables:
 ## 4. Decisiones que no se deben romper
 
 - **Portapapeles:** `Ctrl+V` intenta leer una imagen del portapapeles y sustituye la imagen actual; si no hay imagen, no hace nada.
-- **Idioma:** `config.ini` guarda el idioma (es/ca/en), el historial y la pantalla completa; en el primer arranque se detecta el idioma del sistema.
+- **Idioma:** `config.ini` guarda el idioma (es/ca/en), el historial y el estado maximizado; en el primer arranque se detecta el idioma del sistema.
 - **Historial:** 21 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa.
 - **Cuentagotas:** el clic derecho sobre la imagen lo desactiva. Los botones de copia son iconos y muestran un aviso temporal.
 - **Marca:** el nombre visible es **Hunk Converter**; el nombre técnico del binario sigue siendo `hunk-converter`.

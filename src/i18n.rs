@@ -76,8 +76,8 @@ macro_rules! catalogue {
 catalogue! {
     Reset => ("Reiniciar", "Reinicia", "Reset"),
     Language => ("Idioma", "Idioma", "Language"),
-    Fullscreen => ("Pantalla completa", "Pantalla completa", "Fullscreen"),
-    ExitFullscreen => ("Salir de pantalla completa", "Surt de pantalla completa", "Exit fullscreen"),
+    MaximizeWindow => ("Maximizar ventana", "Maximitza la finestra", "Maximize window"),
+    RestoreWindow => ("Restaurar ventana", "Restaura la finestra", "Restore window"),
     EmptyTitle => ("Suelta una imagen.\nHazla tuya.", "Deixa anar una imatge.\nFes-la teva.", "Drop an image.\nMake it yours."),
     EmptySubtitle => (
         "Convierte, comprime y exporta sin salir de tu equipo.",

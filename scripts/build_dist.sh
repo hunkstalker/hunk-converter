@@ -41,10 +41,9 @@ CÓMO USAR
 Las imágenes se guardan en la carpeta "export/" que está junto a este
 programa. No se sobrescriben: si el nombre ya existe se añade -2, -3, etc.
 
-El idioma, el historial de colores, sus bloqueos y el estado de pantalla
-completa se guardan en config.ini, también junto al programa. Puedes cambiar
-entre español, catalán e inglés desde la cabecera. F11 alterna la pantalla
-completa.
+El idioma, el historial de colores, sus bloqueos y el estado de la ventana
+maximizada se guardan en config.ini, también junto al programa. Puedes cambiar
+entre español, catalán e inglés desde la cabecera.
 
 - La aplicación no necesita instalación ni conexión a internet.
 - En Linux se requieren las bibliotecas gráficas habituales (X11/OpenGL).
