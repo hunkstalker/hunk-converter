@@ -1,5 +1,7 @@
 # Hunk Converter
 
+[Repositorio](https://github.com/hunkstalker/hunk-converter)
+
 **Convierte, comprime, compara, muestrea colores y exporta imágenes sin salir de tu equipo.**
 
 Hunk Converter es una aplicación de escritorio local-first escrita en **Rust + egui**. Arrastra una imagen, elige el formato de salida, ajusta la calidad y comprueba el resultado real con un comparador deslizante antes de guardarlo. También genera iconos `.ico` multirresolución.

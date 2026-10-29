@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2024"
 description = "Editor y conversor de imágenes local con Rust y egui"
 license = "MIT"
+repository = "https://github.com/hunkstalker/hunk-converter"
 rust-version = "1.99"
 
 [dependencies]
