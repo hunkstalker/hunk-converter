@@ -56,7 +56,7 @@ La muestra se toma del píxel original, no del resultado recompimido, y conserva
 - Cuando el historial está lleno, se sustituye el color no fijado más antiguo.
 - Si todos los colores están fijados, el color nuevo se muestra pero no entra al historial; aparece un aviso.
 - El botón de papelera limpia los colores no fijados.
-- El historial se conserva en `config.ini`, junto al ejecutable.
+- El historial y el estado de cada candado se conservan en `config.ini`, junto al ejecutable. Al reiniciar, los colores fijados siguen fijados.
 
 ## Idiomas y configuración
 
@@ -172,7 +172,7 @@ cargo clippy --all-targets -- -D warnings
 cargo fmt --all -- --check
 ```
 
-La suite cubre codificación WebP/JPG/PNG/AVIF/JPEG XL, historial y configuración, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y la zona de agarre del comparador. También se ejecuta en GitHub Actions.
+La suite cubre 23 pruebas: codificación WebP/JPG/PNG/AVIF/JPEG XL, historial y bloqueos, configuración, calidad, transparencia, aplanado JPG, estructura ICO, códigos de color, rasterización SVG y nombres de exportación. También se ejecuta en GitHub Actions.
 
 ## Rendimiento
 
@@ -185,16 +185,23 @@ La versión Rust/egui se comparó con el prototipo Godot antes de migrar. En el 
 ```text
 .
 ├── assets/                 Iconos, tipografía y licencias
-├── docs/                   Capturas e informe de benchmark
+├── docs/                   Capturas, benchmark y arquitectura
 ├── notes/                  Evidencia fechada de las sesiones
 ├── scripts/build_dist.sh   Empaquetado portable
 ├── src/
-│   ├── app.rs              Interfaz, estado, cuentagotas e historial
-│   ├── config.rs           config.ini, idioma e historial
-│   ├── i18n.rs             Textos en español, catalán e inglés
-│   ├── core/               Códecs, ICO y conversión de color
+│   ├── app/                Shell, estado, acciones y componentes egui
+│   │   ├── actions.rs      Efectos explícitos devueltos por la UI
+│   │   ├── encoding.rs     Worker de codificación y revisiones
+│   │   ├── export.rs       Exportación portable sin sobrescritura
+│   │   ├── session.rs      Carga, pegado, reinicio y formato
+│   │   ├── state.rs        SourceImage, RenderedResult, Toast
+│   │   └── ui/             Cabecera, sidebar, color, preview y widgets
+│   ├── codec/              WebP, JPG, PNG, AVIF, JPEG XL, ICO y SVG
+│   ├── domain/             Formatos, color, historial y errores tipados
+│   ├── settings/           config.ini, idioma, historial y maximizado
 │   ├── bin/                Benchmark, muestra y generador de icono
 │   ├── demo.rs             Imagen sintética para capturas
+│   ├── i18n.rs             Textos en español, catalán e inglés
 │   └── theme.rs            Tema visual
 ├── proyecto.md             Documento vivo
 ├── todo.md                 Tareas pendientes
@@ -210,6 +217,7 @@ La versión Rust/egui se comparó con el prototipo Godot antes de migrar. En el 
 - [retomar.md](retomar.md) — estado y contexto para continuar.
 - [notes/](notes/) — evidencia fechada.
 - [docs/benchmark-2026-10-28.md](docs/benchmark-2026-10-28.md) — benchmark comparativo.
+- [docs/arquitectura.md](docs/arquitectura.md) — decisiones de arquitectura y reglas de código.
 
 El prototipo Godot original se conserva como archivo histórico en `../Prototipo`.
 

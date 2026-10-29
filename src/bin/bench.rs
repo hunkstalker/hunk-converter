@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use hunk_converter::core::codec::{self, EncodeOptions, OutputFormat, format_bytes};
+use hunk_converter::codec::{self, EncodeOptions, OutputFormat, format_bytes};
 
 fn main() {
     let path = std::env::args()

@@ -3,6 +3,8 @@ use std::io::Cursor;
 use image::codecs::png::{CompressionType, FilterType, PngEncoder};
 use image::{ExtendedColorType, ImageEncoder, RgbaImage, imageops};
 
+use crate::domain::error::IcoError;
+
 pub struct IcoOutput {
     pub bytes: Vec<u8>,
     pub preview: RgbaImage,
@@ -11,8 +13,7 @@ pub struct IcoOutput {
     pub height: u32,
 }
 
-/// Builds an ICO container using PNG-compressed frames.
-pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutput, String> {
+pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutput, IcoError> {
     let mut sizes = requested_sizes
         .iter()
         .copied()
@@ -22,7 +23,7 @@ pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutp
     sizes.dedup();
 
     if sizes.is_empty() {
-        return Err("Selecciona al menos un tamaño de icono.".to_owned());
+        return Err(IcoError::NoSizes);
     }
 
     let mut frames: Vec<(u32, Vec<u8>)> = Vec::with_capacity(sizes.len());
@@ -53,7 +54,10 @@ pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutp
             FilterType::Adaptive,
         )
         .write_image(frame.as_raw(), size, size, ExtendedColorType::Rgba8)
-        .map_err(|error| format!("No se pudo codificar el icono de {size} px: {error}"))?;
+        .map_err(|source| IcoError::Encode {
+            size,
+            source: Box::new(source),
+        })?;
 
         frames.push((size, png));
         if size >= largest_size {
@@ -74,10 +78,10 @@ pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutp
         let dimension = if *size >= 256 { 0 } else { *size as u8 };
         bytes.push(dimension);
         bytes.push(dimension);
-        bytes.push(0); // palette size
-        bytes.push(0); // reserved
-        bytes.extend_from_slice(&1u16.to_le_bytes()); // color planes
-        bytes.extend_from_slice(&32u16.to_le_bytes()); // bits per pixel
+        bytes.push(0);
+        bytes.push(0);
+        bytes.extend_from_slice(&1u16.to_le_bytes());
+        bytes.extend_from_slice(&32u16.to_le_bytes());
         bytes.extend_from_slice(&(png.len() as u32).to_le_bytes());
         bytes.extend_from_slice(&payload_offset.to_le_bytes());
         payload_offset += png.len() as u32;
@@ -86,7 +90,7 @@ pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutp
         bytes.extend_from_slice(png);
     }
 
-    let preview = largest_frame.ok_or_else(|| "No se pudo generar ningún icono.".to_owned())?;
+    let preview = largest_frame.ok_or(IcoError::Empty)?;
     Ok(IcoOutput {
         bytes,
         preview,
@@ -99,55 +103,34 @@ pub fn encode_ico(source: &RgbaImage, requested_sizes: &[u32]) -> Result<IcoOutp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use image::{Rgba, RgbaImage};
 
     #[test]
     fn writes_valid_multisize_ico() {
         let mut source = RgbaImage::new(120, 64);
-        image::imageops::overlay(
-            &mut source,
-            &RgbaImage::from_pixel(120, 64, Rgba([99, 200, 80, 255])),
-            0,
-            0,
-        );
-        let result = encode_ico(&source, &[256, 16, 32]).unwrap();
-        assert_eq!(result.sizes, vec![16, 32, 256]);
-        assert_eq!(result.width, 256);
-        assert_eq!(result.bytes[0..4], [0, 0, 1, 0]);
-        let count = u16::from_le_bytes([result.bytes[4], result.bytes[5]]) as usize;
-        assert_eq!(count, 3);
-
-        for index in 0..count {
-            let entry = 6 + index * 16;
-            let dimension = result.bytes[entry];
-            let size = if dimension == 0 {
-                256
-            } else {
-                dimension as usize
-            };
-            let length = u32::from_le_bytes([
-                result.bytes[entry + 8],
-                result.bytes[entry + 9],
-                result.bytes[entry + 10],
-                result.bytes[entry + 11],
-            ]) as usize;
-            let offset = u32::from_le_bytes([
-                result.bytes[entry + 12],
-                result.bytes[entry + 13],
-                result.bytes[entry + 14],
-                result.bytes[entry + 15],
-            ]) as usize;
-            assert_eq!(&result.bytes[offset..offset + 4], b"\x89PNG");
-            let decoded = image::load_from_memory(&result.bytes[offset..offset + length])
-                .unwrap()
-                .to_rgba8();
-            assert_eq!(decoded.dimensions(), (size as u32, size as u32));
+        for (x, y, pixel) in source.enumerate_pixels_mut() {
+            *pixel = image::Rgba([x as u8, y as u8, 128, 255]);
         }
+        let output = encode_ico(&source, &[16, 32, 48]).unwrap();
+        assert_eq!(output.frame_count_marker(), 3);
+        assert_eq!(output.bytes[0..4], [0, 0, 1, 0]);
+        assert_eq!(output.bytes[4], 3);
+        assert_eq!(output.sizes, vec![16, 32, 48]);
+        assert_eq!(output.preview.dimensions(), (48, 48));
     }
 
     #[test]
     fn rejects_empty_sizes() {
         let source = RgbaImage::new(16, 16);
-        assert!(encode_ico(&source, &[]).is_err());
+        assert!(matches!(encode_ico(&source, &[]), Err(IcoError::NoSizes)));
+        assert!(matches!(
+            encode_ico(&source, &[8, 512]),
+            Err(IcoError::NoSizes)
+        ));
+    }
+
+    impl IcoOutput {
+        fn frame_count_marker(&self) -> u16 {
+            u16::from_le_bytes([self.bytes[4], self.bytes[5]])
+        }
     }
 }

@@ -71,8 +71,8 @@
 
 ## Medidas finales
 
-- Ejecutable Linux: 16.847.272 B (16,1 MiB).
-- Ejecutable Windows: 15.398.912 B (14,7 MiB).
+- Ejecutable Linux: 16.866.416 B (16,1 MiB).
+- Ejecutable Windows: 15.420.416 B (14,7 MiB).
 - Arranque a ventana: 200,2 ms de mediana (20 arranques).
 - RSS en reposo: 102,0 MiB.
 - RSS con imagen 12 MP: 212,6 MiB.

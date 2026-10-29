@@ -1,6 +1,5 @@
 use image::{Rgb, RgbImage, RgbaImage};
 
-/// Formats a color as the five strings shown in the UI.
 pub fn color_codes(rgba: [u8; 4]) -> [(&'static str, String); 4] {
     let [r, g, b, a] = rgba;
     let alpha = a as f32 / 255.0;
@@ -39,7 +38,6 @@ pub fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
     (hue, saturation * 100.0, lightness * 100.0)
 }
 
-/// Composites an RGBA image over an opaque background. Used before JPEG encoding.
 pub fn flatten_rgba(source: &RgbaImage, background: [u8; 4]) -> RgbImage {
     let bg = [
         background[0] as f32,
@@ -57,6 +55,35 @@ pub fn flatten_rgba(source: &RgbaImage, background: [u8; 4]) -> RgbImage {
         output.put_pixel(x, y, Rgb(blended));
     }
     output
+}
+
+pub fn parse_hex_rgba(value: &str) -> Option<[u8; 4]> {
+    let value = value.trim().trim_start_matches('#');
+    if !value.chars().all(|character| character.is_ascii_hexdigit()) {
+        return None;
+    }
+    match value.len() {
+        6 => Some([
+            u8::from_str_radix(&value[0..2], 16).ok()?,
+            u8::from_str_radix(&value[2..4], 16).ok()?,
+            u8::from_str_radix(&value[4..6], 16).ok()?,
+            255,
+        ]),
+        8 => Some([
+            u8::from_str_radix(&value[0..2], 16).ok()?,
+            u8::from_str_radix(&value[2..4], 16).ok()?,
+            u8::from_str_radix(&value[4..6], 16).ok()?,
+            u8::from_str_radix(&value[6..8], 16).ok()?,
+        ]),
+        _ => None,
+    }
+}
+
+pub fn hex_rgba(rgba: [u8; 4]) -> String {
+    format!(
+        "#{:02X}{:02X}{:02X}{:02X}",
+        rgba[0], rgba[1], rgba[2], rgba[3]
+    )
 }
 
 #[cfg(test)]
@@ -81,5 +108,13 @@ mod tests {
         let flattened = flatten_rgba(&image, [255, 255, 255, 255]);
         assert_eq!(flattened.get_pixel(0, 0).0, [255, 0, 0]);
         assert_eq!(flattened.get_pixel(1, 0).0, [255, 255, 255]);
+    }
+
+    #[test]
+    fn parses_hex_with_and_without_alpha() {
+        assert_eq!(parse_hex_rgba("#FF0000"), Some([255, 0, 0, 255]));
+        assert_eq!(parse_hex_rgba("00FF0080"), Some([0, 255, 0, 128]));
+        assert_eq!(parse_hex_rgba("#12345"), None);
+        assert_eq!(hex_rgba([124, 126, 120, 255]), "#7C7E78FF");
     }
 }

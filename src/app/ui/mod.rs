@@ -1,0 +1,14 @@
+mod canvas;
+mod color_card;
+mod empty;
+mod footer;
+mod format_picker;
+mod header;
+mod history;
+mod ico_sizes;
+mod icons;
+mod preview;
+mod quality;
+mod sidebar;
+mod toast;
+pub(super) mod widgets;

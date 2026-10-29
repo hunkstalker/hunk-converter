@@ -1,3 +1,8 @@
+use crate::domain::error::{
+    AppError, ClipboardError, ConfigError, EncodeError, ExportError, IcoError, LoadError,
+};
+use crate::domain::format::OutputFormat;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Lang {
     Es,
@@ -257,6 +262,7 @@ catalogue! {
     ErrTooLarge => ("La imagen supera el límite de 200 MB.", "La imatge supera el límit de 200 MB.", "The image exceeds the 200 MB limit."),
     ErrUnsupported => ("El archivo no parece una imagen compatible.", "El fitxer no sembla una imatge compatible.", "The file does not look like a supported image."),
     ErrDecode => ("No se pudo decodificar la imagen:", "No s'ha pogut descodificar la imatge:", "Could not decode the image:"),
+    ErrConfig => ("No se pudo guardar la configuración:", "No s'ha pogut desar la configuració:", "Could not save the configuration:"),
     ErrSvgParse => ("No se pudo interpretar el SVG:", "No s'ha pogut interpretar l'SVG:", "Could not parse the SVG:"),
     ErrSvgCanvas => ("No se pudo crear el lienzo del SVG.", "No s'ha pogut crear el llenç de l'SVG.", "Could not create the SVG canvas."),
     ErrSvgInvalid => ("El SVG no produjo una imagen válida.", "L'SVG no ha produït una imatge vàlida.", "The SVG did not produce a valid image."),
@@ -344,8 +350,8 @@ pub fn fallback_name(lang: Lang) -> &'static str {
     }
 }
 
-pub fn format_hint(lang: Lang, format: crate::core::codec::OutputFormat) -> &'static str {
-    use crate::core::codec::OutputFormat as F;
+pub fn format_hint(lang: Lang, format: OutputFormat) -> &'static str {
+    use OutputFormat as F;
     let key = match format {
         F::Webp => K::FormatWebpHint,
         F::Jpg => K::FormatJpgHint,
@@ -358,7 +364,7 @@ pub fn format_hint(lang: Lang, format: crate::core::codec::OutputFormat) -> &'st
 }
 
 pub fn localized_bytes(lang: Lang, bytes: u64) -> String {
-    let value = crate::core::codec::format_bytes(bytes);
+    let value = crate::domain::format_bytes(bytes);
     if lang == Lang::En {
         value.replace(',', ".")
     } else {
@@ -366,40 +372,85 @@ pub fn localized_bytes(lang: Lang, bytes: u64) -> String {
     }
 }
 
-pub fn localize_error(lang: Lang, message: &str) -> String {
-    let mappings = [
-        ("No se pudo leer el archivo:", K::ErrReadFile),
-        ("No se pudo decodificar la imagen:", K::ErrDecode),
-        ("No se pudo interpretar el SVG:", K::ErrSvgParse),
-        ("No se pudo codificar el JPG:", K::ErrEncodeJpg),
-        ("No se pudo codificar el PNG:", K::ErrEncodePng),
-        ("No se pudo codificar el AVIF:", K::ErrEncodeAvif),
-        ("No se pudo codificar el JPEG XL:", K::ErrEncodeJxl),
-        (
-            "No se pudo decodificar la vista previa AVIF:",
-            K::ErrPreviewAvif,
-        ),
-        (
-            "No se pudo decodificar la vista previa JPEG XL:",
-            K::ErrPreviewJxl,
-        ),
-        ("No se pudo decodificar la vista previa:", K::ErrPreview),
-        ("No se pudo iniciar el PNG:", K::ErrPngStart),
-    ];
-    for (source, key) in mappings {
-        if let Some(detail) = message.strip_prefix(source) {
-            return format!("{}{detail}", t(lang, key));
+pub fn present_error(lang: Lang, error: &AppError) -> String {
+    match error {
+        AppError::Load(error) => present_load_error(lang, error),
+        AppError::Encode(error) => present_encode_error(lang, error),
+        AppError::Export(error) => present_export_error(lang, error),
+        AppError::Clipboard(error) => present_clipboard_error(lang, error),
+        AppError::Config(error) => present_config_error(lang, error),
+    }
+}
+
+fn present_load_error(lang: Lang, error: &LoadError) -> String {
+    match error {
+        LoadError::Read { source, .. } => detail(lang, K::ErrReadFile, source),
+        LoadError::TooLarge { .. } => t(lang, K::ErrTooLarge).to_owned(),
+        LoadError::Unsupported => t(lang, K::ErrUnsupported).to_owned(),
+        LoadError::Decode { source } => detail(lang, K::ErrDecode, source),
+        LoadError::SvgParse { source } => detail(lang, K::ErrSvgParse, source),
+        LoadError::SvgCanvas => t(lang, K::ErrSvgCanvas).to_owned(),
+        LoadError::SvgInvalid => t(lang, K::ErrSvgInvalid).to_owned(),
+        LoadError::InvalidDimensions => t(lang, K::ErrInvalidDimensions).to_owned(),
+        LoadError::DimensionsLimit => t(lang, K::ErrDimensionsLimit).to_owned(),
+    }
+}
+
+fn present_encode_error(lang: Lang, error: &EncodeError) -> String {
+    match error {
+        EncodeError::InvalidDimensions => t(lang, K::ErrInvalidDimensions).to_owned(),
+        EncodeError::Ico(error) => present_ico_error(lang, error),
+        EncodeError::Jpg { source } => detail(lang, K::ErrEncodeJpg, source),
+        EncodeError::PngStart { source } => detail(lang, K::ErrPngStart, source),
+        EncodeError::Png { source } => detail(lang, K::ErrEncodePng, source),
+        EncodeError::Avif { source } => detail(lang, K::ErrEncodeAvif, source),
+        EncodeError::Jxl { source } => detail(lang, K::ErrEncodeJxl, source),
+        EncodeError::Preview { format, source } => {
+            let key = match format {
+                OutputFormat::Avif => K::ErrPreviewAvif,
+                OutputFormat::Jxl => K::ErrPreviewJxl,
+                _ => K::ErrPreview,
+            };
+            detail(lang, key, source)
+        }
+        EncodeError::AvifPreviewInvalid => t(lang, K::ErrAvifInvalid).to_owned(),
+    }
+}
+
+fn present_ico_error(lang: Lang, error: &IcoError) -> String {
+    match error {
+        IcoError::NoSizes => t(lang, K::SelectIcoSize).to_owned(),
+        IcoError::Encode { size, source } => {
+            detail(lang, K::ErrProcessImage, format!("{size} px: {source}"))
+        }
+        IcoError::Empty => t(lang, K::ErrProcessImage).to_owned(),
+    }
+}
+
+fn present_export_error(lang: Lang, error: &ExportError) -> String {
+    match error {
+        ExportError::MissingExecutableDirectory => t(lang, K::ExportFolderError).to_owned(),
+        ExportError::CreateDir { source, .. } => detail(lang, K::ExportCreateError, source),
+        ExportError::Write { source, .. } => detail(lang, K::ExportWriteError, source),
+    }
+}
+
+fn present_clipboard_error(lang: Lang, error: &ClipboardError) -> String {
+    match error {
+        ClipboardError::Open { source } => detail(lang, K::ClipboardOpenError, source),
+        ClipboardError::Read { source } => detail(lang, K::ClipboardReadError, source),
+        ClipboardError::InvalidImage => t(lang, K::ClipboardInvalid).to_owned(),
+    }
+}
+
+fn present_config_error(lang: Lang, error: &ConfigError) -> String {
+    match error {
+        ConfigError::Read { source, .. } | ConfigError::Write { source, .. } => {
+            detail(lang, K::ErrConfig, source)
         }
     }
-    let exact = match message {
-        "La imagen supera el límite de 200 MB." => K::ErrTooLarge,
-        "El archivo no parece una imagen compatible." => K::ErrUnsupported,
-        "No se pudo crear el lienzo del SVG." => K::ErrSvgCanvas,
-        "El SVG no produjo una imagen válida." => K::ErrSvgInvalid,
-        "La imagen no tiene dimensiones válidas." => K::ErrInvalidDimensions,
-        "La imagen supera el límite de 40 MP o 16 384 px por lado." => K::ErrDimensionsLimit,
-        "El AVIF no produjo una imagen válida." => K::ErrAvifInvalid,
-        _ => return message.to_owned(),
-    };
-    t(lang, exact).to_owned()
+}
+
+fn detail(lang: Lang, key: K, detail: impl std::fmt::Display) -> String {
+    format!("{} {detail}", t(lang, key))
 }

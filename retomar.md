@@ -27,7 +27,8 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Comparador visual con divisor, damero, zoom con rueda y paneo con clic derecho.
 - Zoom de 100 % a 800 % anclado al cursor; clic en el porcentaje para volver al ajuste.
 - Cuentagotas con muestra del píxel original, coordenadas, códigos HEX/RGB/RGBA/HSL, botones de copia y aviso de confirmación. La tarjeta reserva el espacio de coordenadas y códigos para no cambiar de altura.
-- Historial de 21 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados.
+- Historial de 21 colores en tres filas: selección con clic izquierdo, bloqueo con clic derecho y limpieza de no fijados. Los bloqueos persisten entre sesiones.
+- Arquitectura modular: dominio puro, acciones explícitas, errores tipados y UI dividida por componentes. Ver `docs/arquitectura.md`.
 - Idioma, historial, bloqueos y estado maximizado se guardan en `config.ini`, junto al ejecutable.
 - La aplicación se abre con la ventana maximizada; los controles nativos permiten maximizar o restaurar.
 - Icono propio de máscara de gas y marca **Hunk Converter / IMAGE TOOLBOX**.
@@ -37,7 +38,7 @@ El prototipo Godot original está archivado en `/workspace/Prototipo/`. No se de
 - Reinicio, atajos y avisos de error.
 - **Render bajo demanda:** sin repintado de UI cuando la ventana está quieta.
 - Builds portables de Linux y Windows; assets y fuente embebidos.
-- **13 pruebas Rust**, clippy y formato limpios.
+- **23 pruebas Rust**, clippy y formato limpios.
 - CI de Rust en GitHub Actions.
 - Benchmark comparativo completo en `docs/benchmark-2026-10-28.md`.
 
@@ -74,7 +75,10 @@ Builds portables:
 
 - **Portapapeles:** `Ctrl+V` intenta leer una imagen del portapapeles y sustituye la imagen actual; si no hay imagen, no hace nada.
 - **Idioma:** `config.ini` guarda el idioma (es/ca/en), el historial y el estado maximizado; en el primer arranque se detecta el idioma del sistema.
-- **Historial:** 21 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa.
+- **Historial:** 21 colores máximo; al llenarse se sustituye el no fijado más antiguo. Los fijados nunca se reemplazan. Si todos están fijados, el color nuevo no se guarda y se avisa. El bloqueo se persiste en `config.ini` con `colorN=#RRGGBBAA|1`.
+- **Arquitectura:** `domain` no conoce egui ni ficheros; `ui` devuelve `AppAction` para los efectos de aplicación; `app` es el único que toca disco, workers y configuración. No introducir Clean Architecture completa ni un trait por códec.
+- **Errores:** usar enums tipados y `i18n::present_error`; no volver a `Result<_, String>` ni a comparar mensajes en español.
+- **Parámetros:** máximo 3 además de `self`; agrupar en DTOs cuando haga falta.
 - **Cuentagotas:** el clic derecho sobre la imagen lo desactiva. Los botones de copia son iconos y muestran un aviso temporal.
 - **Marca:** el nombre visible es **Hunk Converter**; el nombre técnico del binario sigue siendo `hunk-converter`.
 - **Salida portable:** en una build, `<carpeta del ejecutable>/export/`; en desarrollo, `target/release/export/`.
@@ -98,12 +102,12 @@ Builds portables:
 
 ```text
 src/main.rs                  eframe, ventana e icono
-src/app.rs                   UI, estado, cuentagotas, historial, hilos y exportación
-src/config.rs                config.ini, idioma, historial y pantalla
-src/i18n.rs                  Traducciones es/ca/en
-src/core/codec.rs            Carga/decodificación/codificación
-src/core/color.rs            Códigos de color y aplanado
-src/core/ico.rs              Contenedor ICO
+src/app/                     Shell, acciones, estado y componentes egui
+src/app/ui/                  Cabecera, sidebar, color, canvas, avisos
+src/domain/                  Formatos, color, historial, exportación y errores
+src/codec/                   WebP, JPG, PNG, AVIF, JPEG XL, ICO y SVG
+src/settings/                config.ini, idioma, historial y maximizado
+src/i18n.rs                  Traducciones es/ca/en y errores tipados
 src/demo.rs                  Imagen sintética para demos/capturas
 src/theme.rs                 Tema egui
 src/bin/bench.rs             Benchmark de códecs
@@ -111,7 +115,7 @@ src/bin/make_demo.rs         Generador de muestra
 src/bin/make_icon.rs         Rasteriza el icono SVG
 scripts/build_dist.sh        Empaquetado portable
 assets/                      Manrope, iconos y licencias
-docs/                        Capturas e informe de benchmark
+docs/                        Capturas, benchmark y arquitectura
 notes/                       Evidencia fechada
 proyecto.md                 Documento de producto
 todo.md                     Tareas pendientes
@@ -121,7 +125,7 @@ t-completadas.md            Tareas cerradas
 ## 6. Tareas
 
 - Pendientes: `todo.md` (t-10 a t-13, t-15 a t-18, t-22 a t-24).
-- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27, t-28, t-29 y t-30).
+- Cerradas: `t-completadas.md` (t-1 a t-9, t-14, t-19, t-20, t-21, t-25, t-26, t-27, t-28, t-29, t-30 y t-31).
 - Evidencia: todas las notas de `notes/`, incluida la migración.
 - **Regla:** si el usuario pregunta qué tareas hay, devolver toda la información de cada tarea pendiente de `todo.md`: identificador `t-N`, título y descripción completa. Al cerrar una tarea, moverla a `t-completadas.md` y actualizar este archivo.
 

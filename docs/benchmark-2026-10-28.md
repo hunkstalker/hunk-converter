@@ -51,11 +51,11 @@ Las mediciones de interfaz se hicieron con las builds portables finales.
 
 | Artefacto | Godot | Rust/egui 0.2.0 | Reducción |
 | --- | ---: | ---: | ---: |
-| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 16.847.272 B (16,1 MiB) | 77,3 % |
-| Carpeta Linux | 74.178.860 B | 16.855.251 B | 77,3 % |
+| Ejecutable Linux | 74.171.392 B (70,7 MiB) | 16.866.416 B (16,1 MiB) | 77,3 % |
+| Carpeta Linux | 74.178.860 B | 16.874.395 B | 77,3 % |
 | `.tar.gz` Linux | 27,7 MiB | 7,2 MiB | 74,1 % |
-| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 15.398.912 B (14,7 MiB) | 86,0 % |
-| Carpeta Windows | 109.842.428 B | 15.406.891 B | 86,0 % |
+| Ejecutable Windows | 109.834.960 B (104,7 MiB) | 15.420.416 B (14,7 MiB) | 86,0 % |
+| Carpeta Windows | 109.842.428 B | 15.428.395 B | 86,0 % |
 | `.zip` Windows | 36,9 MiB | 6,7 MiB | 82,0 % |
 
 Dependencias:

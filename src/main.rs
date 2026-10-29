@@ -2,7 +2,7 @@
 
 use eframe::egui;
 use hunk_converter::app::HunkApp;
-use hunk_converter::config;
+use hunk_converter::settings;
 
 fn main() -> eframe::Result {
     let icon = window_icon();
@@ -16,7 +16,7 @@ fn main() -> eframe::Result {
             ])
         })
         .unwrap_or([1280.0, 800.0]);
-    let mut settings = config::Settings::load();
+    let mut settings = settings::Settings::load();
     let windowed = std::env::var_os("HUNK_WINDOWED").is_some();
     let maximized = settings.maximized && !windowed;
     settings.maximized = maximized;

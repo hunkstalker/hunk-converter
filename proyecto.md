@@ -87,7 +87,7 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 - En modo ICO se desactiva, porque la vista no representa la imagen original.
 - La muestra y el zoom se reinician al cargar otra imagen o reiniciar la sesión.
 - **Historial:** 21 colores en tres filas. Clic izquierdo selecciona; clic derecho fija o libera. El color no fijado más antiguo se reemplaza cuando está lleno. El botón de papelera limpia los no fijados.
-- El historial y los bloqueos se guardan en `config.ini`.
+- El historial y los bloqueos se guardan en `config.ini` y persisten entre sesiones.
 
 ### 3.5 Idiomas y configuración
 
@@ -174,20 +174,52 @@ La versión actual está construida en **Rust + egui**. El prototipo original de
 | Ruta | Responsabilidad |
 | --- | --- |
 | `src/main.rs` | Arranque de eframe, ventana, icono e inicialización |
-| `src/app.rs` | Estado, UI, interacción, cuentagotas, historial, hilos y exportación |
-| `src/config.rs` | `config.ini`, idioma, historial y estado maximizado |
-| `src/i18n.rs` | Traducciones español/catalán/inglés |
-| `src/core/codec.rs` | Carga, decodificación, codificación y previews |
-| `src/core/color.rs` | Códigos de color y aplanado RGBA |
-| `src/core/ico.rs` | Contenedor ICO y frames PNG |
-| `src/demo.rs` | Imagen sintética para demos y capturas |
+| `src/app/mod.rs` | Shell: composición, estado y `eframe::App` |
+| `src/app/actions.rs` | `AppAction`: efectos explícitos devueltos por la UI |
+| `src/app/encoding.rs` | Worker de codificación, revisiones y previews |
+| `src/app/export.rs` | Exportación portable y nombres sin sobrescritura |
+| `src/app/session.rs` | Carga, pegado, reinicio, demo y formato |
+| `src/app/state.rs` | `SourceImage`, `RenderedResult`, `Toast` y mensajes del worker |
+| `src/app/ui/` | Componentes egui: cabecera, sidebar, color, canvas, avisos |
+| `src/domain/format.rs` | Política de formatos, extensiones y badges |
+| `src/domain/color.rs` | Códigos de color, HSL y aplanado RGBA |
+| `src/domain/history.rs` | Historial, límite, bloqueos y limpieza |
+| `src/domain/export_name.rs` | Saneado y numeración de nombres de salida |
+| `src/domain/error.rs` | Errores tipados de carga, codificación, exportación y configuración |
+| `src/codec/mod.rs` | Carga, validación y dispatcher de codificación |
+| `src/codec/encoders.rs` | WebP, JPG, PNG, AVIF y JPEG XL |
+| `src/codec/ico.rs` | Contenedor ICO y frames PNG |
+| `src/codec/svg.rs` | Rasterización SVG |
+| `src/settings/mod.rs` | `Settings`, ruta y guardado de `config.ini` |
+| `src/settings/ini.rs` | Parser/serializador INI, compatibilidad y avisos |
+| `src/i18n.rs` | Traducciones es/ca/en y presentación de errores tipados |
 | `src/theme.rs` | Paleta, tipografía, estilos y frames |
+| `src/demo.rs` | Imagen sintética para demos y capturas |
 | `src/bin/bench.rs` | Benchmark de códecs y memoria |
 | `src/bin/make_demo.rs` | Generador de imágenes de prueba |
 | `src/bin/make_icon.rs` | Rasteriza el icono SVG a PNG |
 | `scripts/build_dist.sh` | Empaquetado portable Linux/Windows |
 | `docs/benchmark-2026-10-28.md` | Comparación de rendimiento y recursos |
+| `docs/arquitectura.md` | Decisiones de arquitectura y reglas de código |
 | `tests` integrados en los módulos | Pruebas unitarias Rust |
+
+### Principios de arquitectura
+
+La aplicación es un **monolito modular por features con núcleo funcional y
+shell imperativo**. No se usa Clean Architecture completa ni un contenedor de
+dependencias: la app está terminada y no se espera que escale. Las decisiones
+completas están en [`docs/arquitectura.md`](docs/arquitectura.md).
+
+- `domain` es puro: no conoce egui, ficheros ni hilos.
+- `ui` solo lee estado y devuelve `AppAction` para los efectos de aplicación.
+- `app` aplica las acciones y es el único que toca disco, workers o configuración.
+- `codec` y `settings` contienen implementaciones concretas.
+- Los errores son enums tipados (`LoadError`, `EncodeError`, `ExportError`,
+  `ClipboardError`, `ConfigError`) y se traducen con `i18n::present_error`.
+- Máximo 3 parámetros además de `self`; los grupos se pasan como DTO
+  (`FormatCard`, `HistorySwatch`, `Badge`, `SourceInput`, `CanvasContext`).
+- Las funciones de UI no guardan configuración, no copian al portapapeles y no
+  lanzan hilos de forma oculta.
 
 ### Flujo de datos
 
@@ -299,7 +331,7 @@ Resumen del contexto de referencia:
 
 ## 9. Pruebas y verificación
 
-- **13 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG, historial, configuración y zona de agarre del comparador.
+- **23 pruebas Rust**: codificación WebP/JPG/PNG/AVIF/JPEG XL, calidad, transparencia, aplanado JPG, ICO, códigos de color, carga SVG, historial, bloqueos, configuración, nombres de exportación y zona de agarre del comparador.
 - `cargo fmt --all -- --check` limpio.
 - `cargo clippy --all-targets -- -D warnings` limpio.
 - CI de Godot histórica en el repositorio archivado; CI de Rust en este repositorio.

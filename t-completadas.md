@@ -135,3 +135,10 @@
 
 **Completada:** 2026-10-29
 **Resultado:** La cabecera conserva solo el selector de idioma y el reinicio. La tarjeta reserva siempre la línea de coordenadas y los códigos mantienen una fila fija, por lo que muestrear o elegir un color no desplaza el panel. El separador entre el historial y el cuentagotas tiene 10 px de margen por cada lado. El pie enlaza `github.com/hunkstalker/hunk-converter` y lo abre en el navegador. Verificado con capturas comparadas y un navegador simulado.
+
+## t-31 — Refactorización de arquitectura y bloqueos persistentes
+
+**Descripción:** Sustituir el `app.rs` monolítico por un monolito modular con dominio puro, acciones explícitas de UI, errores tipados y persistencia verificada de los colores bloqueados en `config.ini`.
+
+**Completada:** 2026-10-29
+**Resultado:** `app.rs` pasa de más de 2.300 líneas a un shell de ~340 líneas y componentes en `app/ui/`. La lógica de formatos, color, historial, nombres de exportación y errores vive en `domain/`. Los códecs se separan en `codec/` y la configuración en `settings/`. La UI devuelve `AppAction` para workers, disco, portapapeles y configuración. Los bloqueos del historial se guardan con `colorN=#RRGGBBAA|1` y cuentan con pruebas de ida y vuelta. Documentado en `docs/arquitectura.md`.
